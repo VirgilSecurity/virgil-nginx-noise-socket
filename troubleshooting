@@ -1,0 +1,21 @@
+---------------
+файл config:
+    EVENT_MODULES="$EVENT_MODULES $NGX_NSOC_MODULES"
+    добавляем наши модули сразу после event модулей,но в auto/modules есть такая запись:
+    # thread pool module should be initialized after events
+---------------
+структура ngx_nsoc_session_s неведомые флаги
+stat_processing:1
+health_check:1
+---------------
+структура ngx_connection_t
+buffered:8
+need_last_buf:1
+---------------
+структура ngx_event_t
+eof:1
+---------------
+noise-c
+noise_handshakestate_get_fixed_ephemeral_dh
+noise_handshakestate_get_fixed_hybrid_dh
+set_fixed_ephemeral

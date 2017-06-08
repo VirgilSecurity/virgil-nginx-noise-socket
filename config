@@ -1,0 +1,41 @@
+
+    ngx_module_type=CORE
+    ngx_module_name=ngx_nsoc_module
+    ngx_module_srcs="$NGX_ADDON_SRCS $ngx_addon_dir/ngx_noise_protocol.c $ngx_addon_dir/ngx_nsoc.c $ngx_addon_dir/ngx_nsoc_script.c \
+    $ngx_addon_dir/ngx_nsoc_variables.c $ngx_addon_dir/ngx_nsoc_handler.c "
+
+    . auto/module
+
+    ngx_module_type=NGX_NSOC
+    ngx_module_name=ngx_nsoc_core_module
+    ngx_module_srcs="$ngx_addon_dir/ngx_nsoc_core_module.c"
+    
+   . auto/module
+
+    ngx_module_type=NGX_NSOC
+    ngx_module_name=ngx_nsoc_proxy_module
+    ngx_module_srcs="$ngx_addon_dir/ngx_nsoc_proxy_module.c $ngx_addon_dir/ngx_nsoc_upstream_round_robin.c"
+
+   . auto/module
+
+    ngx_module_type=NGX_NSOC
+    ngx_module_name=ngx_nsoc_upstream_module
+    ngx_module_srcs="$ngx_addon_dir/ngx_nsoc_upstream.c"
+
+   . auto/module
+
+    ngx_module_type=NGX_NSOC
+    ngx_module_name=ngx_nsoc_noiseserver_module
+    ngx_module_srcs="$ngx_addon_dir/ngx_nsoc_noiseserver_module.c"
+ 
+  . auto/module
+
+    ngx_module_type=NGX_NSOC
+    ngx_module_name=ngx_nsoc_write_filter_module
+    ngx_module_srcs="$ngx_addon_dir/ngx_nsoc_write_filter_module.c"
+    ngx_module_incs="$ngx_addon_dir"
+    ngx_module_libs="-lnoisekeys -lnoiseprotocol"
+
+  . auto/module
+
+    EVENT_MODULES="$EVENT_MODULES $NGX_NSOC_MODULES"
