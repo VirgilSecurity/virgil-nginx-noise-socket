@@ -116,16 +116,11 @@ typedef struct {
     time_t start_sec;
     ngx_uint_t responses;
 
-    ngx_str_t ssl_name;
-
-    /*noise*/
-    ngx_str_t noise_name;
-    /*end noise*/
     ngx_nsoc_upstream_srv_conf_t *upstream;
     ngx_nsoc_upstream_resolved_t *resolved;
     ngx_nsoc_upstream_state_t *state;
     unsigned connected :1;
-    unsigned proxy_protocol :1;
+    //unsigned proxy_protocol :1;
 } ngx_nsoc_upstream_t;
 
 ngx_nsoc_upstream_srv_conf_t *ngx_nsoc_upstream_add(

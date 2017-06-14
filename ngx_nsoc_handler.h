@@ -13,23 +13,13 @@
 #define NGX_NSOC_BUFFER   1
 #define NGX_NSOC_CLIENT   2
 
-#define NGX_NSOC_BUFSIZE  65536
+#define NGX_NSOC_BUFSIZE  NOISE_PROTOCOL_PAYLOAD_SIZE+2
 
 typedef enum {
     NGX_NSOC_HANDSHAKE_NONE_PHASE = 0,
-    NGX_NSOC_HANDSHAKE_CLIENTHELLO_PHASE,
-    NGX_NSOC_HANDSHAKE_SERVERHELLO_PHASE,
+    NGX_NSOC_HANDSHAKE_PROCESS_PHASE,
+    NGX_NSOC_HANDSHAKE_END_PHASE,
 } ngx_noise_handshake_phases_e;
-
-typedef enum {
-    NGX_NSOC_UNSET_ROLE = -1,
-    NGX_NSOC_CLIENT_ROLE,
-    NGX_NSOC_SERVER_ROLE
-} ngx_noise_role_e;
-
-typedef struct noise_ctx_st {
-        char XOR_symb;
-} NOISE_CTX;
 
 typedef struct ngx_noise_s {
         NOISE_CTX *ctx;
@@ -40,6 +30,7 @@ typedef struct ngx_noise_s {
 typedef struct ngx_noise_connection_s {
 
         ngx_connection_t *connection;
+        noise_protocol_conn_t noise_connection;
         NOISE_CTX *noise_ctx;
 
         ngx_noise_handshake_phases_e handshake_phase;
@@ -48,19 +39,19 @@ typedef struct ngx_noise_connection_s {
         ngx_int_t last;
         ngx_buf_t *buf;
         size_t buffer_size;
+        ngx_buf_t *send_buf;
+        ngx_buf_t *recv_buf;
+        ssize_t send_size;
+        ssize_t recv_size;
 
         ngx_connection_handler_pt handler;
 
         ngx_event_handler_pt saved_read_handler;
         ngx_event_handler_pt saved_write_handler;
 
-        unsigned again :1;
         unsigned handshaked :1;
-        unsigned renegotiation :1;
         unsigned buffer :1;
-        unsigned no_wait_shutdown :1;
-        unsigned no_send_shutdown :1;
-        unsigned handshake_buffer_set :1;
+
 } ngx_noise_connection_t;
 
 void ngx_nsoc_init_connection(ngx_connection_t *c);

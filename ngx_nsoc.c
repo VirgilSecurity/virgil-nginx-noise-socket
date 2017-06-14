@@ -554,10 +554,6 @@ static ngx_int_t ngx_nsoc_add_addrs(ngx_conf_t *cf,
         /*noise*/
         addrs[i].conf.noise_on = addr[i].opt.noise_on;
         /*end noise*/
-        /*#if (NGX_NSOC_SSL)
-         addrs[i].conf.ssl = addr[i].opt.ssl;
-         #endif*/
-        addrs[i].conf.proxy_protocol = addr[i].opt.proxy_protocol;
 
         len = ngx_sock_ntop(
                 &addr[i].opt.sockaddr.sockaddr, addr[i].opt.socklen, buf,
@@ -606,7 +602,6 @@ static ngx_int_t ngx_nsoc_add_addrs6(ngx_conf_t *cf,
         /*noise*/
         addrs6[i].conf.noise_on = addr[i].opt.noise_on;
         /*end noise*/
-        addrs6[i].conf.proxy_protocol = addr[i].opt.proxy_protocol;
 
         len = ngx_sock_ntop(
                 &addr[i].opt.sockaddr.sockaddr, addr[i].opt.socklen, buf,

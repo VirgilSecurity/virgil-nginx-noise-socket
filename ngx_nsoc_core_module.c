@@ -78,12 +78,6 @@ static ngx_command_t  ngx_nsoc_core_commands[] = {
       offsetof(ngx_nsoc_core_srv_conf_t, resolver_timeout),
       NULL },
 
-    { ngx_string("proxy_protocol_timeout"),
-      NGX_NSOC_MAIN_CONF|NGX_NSOC_SRV_CONF|NGX_CONF_TAKE1,
-      ngx_conf_set_msec_slot,
-      NGX_NSOC_SRV_CONF_OFFSET,
-      offsetof(ngx_nsoc_core_srv_conf_t, proxy_protocol_timeout),
-      NULL },
 
     { ngx_string("tcp_nodelay"),
       NGX_NSOC_MAIN_CONF|NGX_NSOC_SRV_CONF|NGX_CONF_FLAG,
@@ -422,7 +416,6 @@ ngx_nsoc_core_create_srv_conf(ngx_conf_t *cf)
     cscf->file_name = cf->conf_file->file.name.data;
     cscf->line = cf->conf_file->line;
     cscf->resolver_timeout = NGX_CONF_UNSET_MSEC;
-    cscf->proxy_protocol_timeout = NGX_CONF_UNSET_MSEC;
     cscf->tcp_nodelay = NGX_CONF_UNSET;
     cscf->preread_buffer_size = NGX_CONF_UNSET_SIZE;
     cscf->preread_timeout = NGX_CONF_UNSET_MSEC;
@@ -472,9 +465,6 @@ ngx_nsoc_core_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
             conf->error_log = &cf->cycle->new_log;
         }
     }
-
-    ngx_conf_merge_msec_value(conf->proxy_protocol_timeout,
-                              prev->proxy_protocol_timeout, 30000);
 
     ngx_conf_merge_value(conf->tcp_nodelay, prev->tcp_nodelay, 1);
 

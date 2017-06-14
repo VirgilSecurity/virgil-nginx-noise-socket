@@ -11,6 +11,7 @@
 
 typedef struct ngx_nsoc_session_s ngx_nsoc_session_t;
 
+#include "ngx_noise_protocol.h"
 #include "ngx_nsoc_handler.h"
 #include "ngx_nsoc_noiseserver_module.h"
 #include "ngx_nsoc_variables.h"
@@ -67,7 +68,7 @@ typedef struct {
         unsigned noise_on :1;
         /*end noise*/
         unsigned ssl :1;
-        unsigned proxy_protocol :1;
+        //unsigned proxy_protocol :1;
 } ngx_nsoc_addr_conf_t;
 
 typedef struct {
@@ -169,13 +170,13 @@ typedef struct {
         ngx_msec_t resolver_timeout;
         ngx_resolver_t *resolver;
 
-        ngx_msec_t proxy_protocol_timeout;
+        //ngx_msec_t proxy_protocol_timeout;
 
         ngx_uint_t listen; /* unsigned  listen:1; */
 } ngx_nsoc_core_srv_conf_t;
 
 struct ngx_nsoc_session_s {
-        uint32_t signature; /* "NOIS" */
+        uint32_t signature; /* "NSOC" */
 
         ngx_connection_t *connection;
 
@@ -196,7 +197,7 @@ struct ngx_nsoc_session_s {
 
         ngx_nsoc_upstream_t *upstream;
         ngx_array_t *upstream_states;
-        /* of ngx_nsoc_upnoisesocket_state_t */
+        /* of ngx_nsoc_upstream_state_t */
         ngx_nsoc_variable_value_t *variables;
 
 #if (NGX_PCRE)
@@ -227,7 +228,7 @@ typedef struct {
         char *(*merge_srv_conf)(ngx_conf_t *cf, void *prev, void *conf);
 } ngx_nsoc_module_t;
 
-#define NGX_NSOC_MODULE       0x53494F4E     /* "NOIS" */
+#define NGX_NSOC_MODULE       0x434F534E     /* "NSOC" */
 
 #define NGX_NSOC_MAIN_CONF    0x02000000
 #define NGX_NSOC_SRV_CONF     0x04000000

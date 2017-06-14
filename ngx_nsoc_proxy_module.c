@@ -26,14 +26,15 @@ typedef struct {
     ngx_uint_t responses;
     ngx_uint_t next_upstream_tries;
     ngx_flag_t next_upstream;
-    ngx_flag_t proxy_protocol;
+    //ngx_flag_t proxy_protocol;
     ngx_nsoc_upstream_local_t *local;
 
     ngx_flag_t noise_enable;
 
     ngx_noise_t *noise;
 
-    char xor_symb;
+    ngx_str_t client_private_key_file;
+    ngx_str_t server_public_key_file;
 
     ngx_nsoc_upstream_srv_conf_t *upstream;
     ngx_nsoc_complex_value_t *upstream_value;
@@ -70,13 +71,11 @@ static char *ngx_nsoc_proxy_bind(ngx_conf_t *cf, ngx_command_t *cmd,
         void *conf);
 
 /*noise*/
-static ngx_int_t ngx_nsoc_proxy_send_proxy_protocol(
-        ngx_nsoc_session_t *s);
 
 static void ngx_nsoc_proxy_noise_init_connection(
         ngx_nsoc_session_t *s);
 static void ngx_nsoc_proxy_noise_handshake(ngx_connection_t *pc);
-static ngx_int_t ngx_nsoc_proxy_set_nsoc(ngx_conf_t *cf,
+static ngx_int_t ngx_nsoc_proxy_set_noisesocket(ngx_conf_t *cf,
         ngx_nsoc_proxy_srv_conf_t *pscf);
 
 /*end noise*/
@@ -185,12 +184,6 @@ static ngx_command_t ngx_nsoc_proxy_commands[] =
     offsetof(ngx_nsoc_proxy_srv_conf_t, next_upstream_timeout),
     NULL },
 
-  { ngx_string("proxy_protocol"),
-    NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_FLAG,
-    ngx_conf_set_flag_slot,
-    NGX_NSOC_SRV_CONF_OFFSET,
-    offsetof(ngx_nsoc_proxy_srv_conf_t, proxy_protocol),
-    NULL },
   /*noise*/
   { ngx_string("proxy_noise"),
     NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_FLAG,
@@ -199,11 +192,18 @@ static ngx_command_t ngx_nsoc_proxy_commands[] =
     offsetof(ngx_nsoc_proxy_srv_conf_t, noise_enable),
     NULL },
 
-  { ngx_string("proxy_noise_xor_symb"),
+  { ngx_string("client_private_key_file"),
     NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_TAKE1,
-    ngx_nsoc_conf_set_char_slot,
+    ngx_conf_set_str_slot,
     NGX_NSOC_SRV_CONF_OFFSET,
-    offsetof(ngx_nsoc_proxy_srv_conf_t, xor_symb),
+    offsetof(ngx_nsoc_proxy_srv_conf_t, client_private_key_file),
+    NULL },
+
+  { ngx_string("server_public_key_file"),
+    NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_TAKE1,
+    ngx_conf_set_str_slot,
+    NGX_NSOC_SRV_CONF_OFFSET,
+    offsetof(ngx_nsoc_proxy_srv_conf_t, server_public_key_file),
     NULL },
   /*end noise*/
 
@@ -237,6 +237,7 @@ ngx_module_t ngx_nsoc_proxy_module =
   NULL, /* exit master */
   NGX_MODULE_V1_PADDING
 };
+
 
 static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s)
 {
@@ -317,10 +318,6 @@ static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s)
         uscf = pscf->upstream;
 
     } else {
-        /*noise*/
-        u->noise_name = u->resolved->host;
-        /*end noise*/
-
         host = &u->resolved->host;
 
         umcf = ngx_nsoc_get_module_main_conf(
@@ -416,10 +413,6 @@ static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s)
     }
 
     u->upstream = uscf;
-
-    /*noise*/
-    u->noise_name = uscf->host;
-    /*end noise*/
 
     if (uscf->peer.init(s, uscf) != NGX_OK) {
         ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
@@ -552,7 +545,6 @@ static void ngx_nsoc_proxy_connect(ngx_nsoc_session_t *s)
     u = s->upstream;
 
     u->connected = 0;
-    u->proxy_protocol = pscf->proxy_protocol;
 
     if (u->state) {
         u->state->response_time = ngx_current_msec - u->state->response_time;
@@ -651,13 +643,7 @@ static void ngx_nsoc_proxy_init_upstream(ngx_nsoc_session_t *s)
 
     /*noise*/
     if ((pc->type == SOCK_STREAM) && (pscf->noise)) {
-        if (u->proxy_protocol) {
-            if (ngx_nsoc_proxy_send_proxy_protocol(s) != NGX_OK) {
-                return;
-            }
 
-            u->proxy_protocol = 0;
-        }
         if (s->client_noise_connection == NULL) {
             ngx_nsoc_proxy_noise_init_connection(s);
             return;
@@ -728,43 +714,6 @@ static void ngx_nsoc_proxy_init_upstream(ngx_nsoc_session_t *s)
 
         cl->next = u->upstream_out;
         u->upstream_out = cl;
-    }
-
-    if (u->proxy_protocol) {
-        ngx_log_debug0(
-                NGX_LOG_DEBUG_STREAM, c->log, 0,
-                "stream proxy add PROXY protocol header");
-
-        cl = ngx_chain_get_free_buf(c->pool, &u->free);
-        if (cl == NULL) {
-            ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
-            return;
-        }
-
-        p = ngx_pnalloc(c->pool, NGX_PROXY_PROTOCOL_MAX_HEADER);
-        if (p == NULL) {
-            ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
-            return;
-        }
-
-        cl->buf->pos = p;
-
-        p = ngx_proxy_protocol_write(c, p, p + NGX_PROXY_PROTOCOL_MAX_HEADER);
-        if (p == NULL) {
-            ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
-            return;
-        }
-
-        cl->buf->last = p;
-        cl->buf->temporary = 1;
-        cl->buf->flush = 0;
-        cl->buf->last_buf = 0;
-        cl->buf->tag = (ngx_buf_tag_t) &ngx_nsoc_proxy_module;
-
-        cl->next = u->upstream_out;
-        u->upstream_out = cl;
-
-        u->proxy_protocol = 0;
     }
 
     if (c->type == SOCK_DGRAM && pscf->responses == 0) {
@@ -851,78 +800,6 @@ static void ngx_nsoc_proxy_noise_handshake(ngx_connection_t *pc)
 //failed:
 
     ngx_nsoc_proxy_next_upstream(s);
-}
-
-static ngx_int_t ngx_nsoc_proxy_send_proxy_protocol(
-        ngx_nsoc_session_t *s)
-{
-    u_char *p;
-    ssize_t n, size;
-    ngx_connection_t *c, *pc;
-    ngx_nsoc_upstream_t *u;
-    ngx_nsoc_proxy_srv_conf_t *pscf;
-    u_char buf[NGX_PROXY_PROTOCOL_MAX_HEADER];
-
-    c = s->connection;
-
-    ngx_log_debug0(
-            NGX_LOG_DEBUG_STREAM, c->log, 0,
-            "stream proxy send PROXY protocol header");
-
-    p = ngx_proxy_protocol_write(c, buf, buf + NGX_PROXY_PROTOCOL_MAX_HEADER);
-    if (p == NULL) {
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
-        return NGX_ERROR;
-    }
-
-    u = s->upstream;
-
-    pc = u->peer.connection;
-
-    size = p - buf;
-
-    n = pc->send(pc, buf, size);
-
-    if (n == NGX_AGAIN) {
-        if (ngx_handle_write_event(pc->write, 0) != NGX_OK) {
-            ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
-            return NGX_ERROR;
-        }
-
-        pscf = ngx_nsoc_get_module_srv_conf(
-                s, ngx_nsoc_proxy_module);
-
-        ngx_add_timer(pc->write, pscf->timeout);
-
-        pc->write->handler = ngx_nsoc_proxy_connect_handler;
-
-        return NGX_AGAIN;
-    }
-
-    if (n == NGX_ERROR) {
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_OK);
-        return NGX_ERROR;
-    }
-
-    if (n != size) {
-
-        /*
-         * PROXY protocol specification:
-         * The sender must always ensure that the header
-         * is sent at once, so that the transport layer
-         * maintains atomicity along the path to the receiver.
-         */
-
-        ngx_log_error(
-                NGX_LOG_ERR, c->log, 0,
-                "could not send PROXY protocol header at once");
-
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
-
-        return NGX_ERROR;
-    }
-
-    return NGX_OK;
 }
 
 /*end noise*/
@@ -1474,18 +1351,6 @@ static void ngx_nsoc_proxy_finalize(ngx_nsoc_session_t *s,
         ngx_log_debug1(
                 NGX_LOG_DEBUG_STREAM, s->connection->log, 0,
                 "close stream proxy upstream connection: %d", pc->fd);
-        /*noise*/
-        if (s->client_noise_connection) {
-            s->client_noise_connection->no_wait_shutdown = 1;
-            (void) ngx_nsoc_shutdown(pc);
-        }
-        /*end noise*/
-#if (NGX_NSOC_SSL)
-        if (pc->ssl) {
-            pc->ssl->no_wait_shutdown = 1;
-            (void) ngx_ssl_shutdown(pc);
-        }
-#endif
 
         ngx_close_connection(pc);
         u->peer.connection = NULL;
@@ -1560,11 +1425,10 @@ ngx_nsoc_proxy_create_srv_conf(ngx_conf_t *cf)
     conf->responses = NGX_CONF_UNSET_UINT;
     conf->next_upstream_tries = NGX_CONF_UNSET_UINT;
     conf->next_upstream = NGX_CONF_UNSET;
-    conf->proxy_protocol = NGX_CONF_UNSET;
+
     conf->local = NGX_CONF_UNSET_PTR;
     /*noise*/
     conf->noise_enable = NGX_CONF_UNSET;
-    conf->xor_symb = NGX_CONF_UNSET;
     /*end noise*/
 
     return conf;
@@ -1598,21 +1462,18 @@ ngx_nsoc_proxy_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_value(conf->next_upstream, prev->next_upstream, 1);
 
-    ngx_conf_merge_value(conf->proxy_protocol, prev->proxy_protocol, 0);
-
     ngx_conf_merge_ptr_value(conf->local, prev->local, NULL);
 
     /*noise*/
     ngx_conf_merge_value(conf->noise_enable, prev->noise_enable, 0);
 
-    ngx_conf_merge_value(conf->xor_symb, prev->xor_symb, 0);
+    ngx_conf_merge_str_value(conf->client_private_key_file, prev->client_private_key_file, "");
+    ngx_conf_merge_str_value(conf->server_public_key_file, prev->server_public_key_file, "");
 
     if (conf->noise_enable
-            && ngx_nsoc_proxy_set_nsoc(cf, conf) != NGX_OK) {
+            && ngx_nsoc_proxy_set_noisesocket(cf, conf) != NGX_OK) {
         return NGX_CONF_ERROR ;
     }
-
-    ngx_conf_merge_value(conf->noise_enable, prev->noise_enable, 0);
 
     /*end noise*/
 
@@ -1621,10 +1482,12 @@ ngx_nsoc_proxy_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 
 /*noise*/
 
-static ngx_int_t ngx_nsoc_proxy_set_nsoc(ngx_conf_t *cf,
+static ngx_int_t ngx_nsoc_proxy_set_noisesocket(ngx_conf_t *cf,
         ngx_nsoc_proxy_srv_conf_t *pscf)
 {
     ngx_pool_cleanup_t *cln;
+    ngx_array_t *private_key, *public_key;
+    ngx_str_t *key;
 
     pscf->noise = ngx_pcalloc(cf->pool, sizeof(ngx_noise_t));
     if (pscf->noise == NULL) {
@@ -1645,49 +1508,36 @@ static ngx_int_t ngx_nsoc_proxy_set_nsoc(ngx_conf_t *cf,
     cln->handler = ngx_nsoc_cleanup_ctx;
     cln->data = pscf->noise;
 
-    pscf->noise->ctx->XOR_symb = pscf->xor_symb;
+    if (pscf->client_private_key_file.len == 0)
+        return NGX_ERROR ;
 
-    /*    if (pscf->ssl_certificate.len) {
+    if (pscf->server_public_key_file.len != 0) {
+        public_key = ngx_array_create(cf->pool, 1, sizeof(ngx_str_t));
+        key = public_key->elts;
+        key->len = NOISE_PROTOCOL_CURVE25519_KEY_LEN;
+        key->data = ngx_pnalloc(
+                cf->pool, NOISE_PROTOCOL_CURVE25519_KEY_LEN);
+        if (ngx_noise_protocol_load_public_key(
+                pscf->server_public_key_file.data, key->data,
+                NOISE_PROTOCOL_CURVE25519_KEY_LEN) != NGX_OK) {
+            return NGX_ERROR;
+        }
+        public_key->nelts = 1;
+        pscf->noise->ctx->public_keys = public_key;
+    }
 
-     if (pscf->ssl_certificate_key.len == 0) {
-     ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
-     "no \"proxy_ssl_certificate_key\" is defined "
-     "for certificate \"%V\"", &pscf->ssl_certificate);
-     return NGX_ERROR;
-     }
+    private_key = ngx_array_create(cf->pool, 1, sizeof(ngx_str_t));
+    key = private_key->elts;
+    key->len = NOISE_PROTOCOL_CURVE25519_KEY_LEN;
+    key->data = ngx_pnalloc(cf->pool, NOISE_PROTOCOL_CURVE25519_KEY_LEN);
+    if (ngx_noise_protocol_load_private_key(
+            pscf->client_private_key_file.data, key->data,
+            NOISE_PROTOCOL_CURVE25519_KEY_LEN) != NGX_OK) {
+        return NGX_ERROR;
+    }
+    private_key->nelts=1;
+    pscf->noise->ctx->private_keys = private_key;
 
-     if (ngx_ssl_certificate(cf, pscf->ssl, &pscf->ssl_certificate,
-     &pscf->ssl_certificate_key, pscf->ssl_passwords)
-     != NGX_OK)
-     {
-     return NGX_ERROR;
-     }
-     }*/
-
-    /*    if (ngx_ssl_ciphers(cf, pscf->ssl, &pscf->ssl_ciphers, 0) != NGX_OK) {
-     return NGX_ERROR;
-     }
-
-     if (pscf->ssl_verify) {
-     if (pscf->ssl_trusted_certificate.len == 0) {
-     ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
-     "no proxy_ssl_trusted_certificate for proxy_ssl_verify");
-     return NGX_ERROR;
-     }
-
-     if (ngx_ssl_trusted_certificate(cf, pscf->ssl,
-     &pscf->ssl_trusted_certificate,
-     pscf->ssl_verify_depth)
-     != NGX_OK)
-     {
-     return NGX_ERROR;
-     }
-
-     if (ngx_ssl_crl(cf, pscf->ssl, &pscf->ssl_crl) != NGX_OK) {
-     return NGX_ERROR;
-     }
-     }
-     */
     return NGX_OK;
 }
 

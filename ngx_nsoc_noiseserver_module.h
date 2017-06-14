@@ -14,9 +14,11 @@
 typedef struct {
         ngx_msec_t handshake_timeout;
 
-        ngx_flag_t prefer_server_ciphers;
         ngx_noise_t *noise;
-        char xor_symb;
+
+        ngx_str_t server_private_key_file;
+        ngx_str_t client_public_key_file;
+
 } ngx_nsoc_noiseserver_conf_t;
 
 extern ngx_module_t ngx_nsoc_noiseserver_module;
