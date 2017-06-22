@@ -4,7 +4,7 @@ Nginx module that implements Noise Socket Protocol by using Virgil Security infr
 ## Features ##
 
  - Own context in the Nginx server providing a functionality of TCP of a proxy.
- - Protection of traffic by means of `Noise Protocol`.
+ - Protection of traffic by means of [Noise Protocol](http://noiseprotocol.org/).
  - At the moment only `Noise_XX_25519_AESGCM_SHA256` noise protocol pattern is realized.
 
 ## Building of Nginx with the virgil-nginx-noise-socket module:
@@ -18,7 +18,7 @@ Nginx module that implements Noise Socket Protocol by using Virgil Security infr
 	$make install
 ```
 
- 2. The example of a script for build of the nginx server with the module is located in virgil-nginx-noise-socket/example/nginx_configure.sh.
+ 2. The example of a script for build of the nginx server with the module is located in `virgil-nginx-noise-socket/example/nginx_configure.sh`.
  
  3. The example of a test configuration of the server is located in `virgil-nginx-noise-socket/example/nginx.conf`. The configuration realizes a functionality of reverse proxy and a backend server working in one copy of nginx launched by the local machine. The configuration works as follows:
 
@@ -106,7 +106,7 @@ Sets the size of the buffer used for reading data from the proxied server. Also 
 ```nginx
 Syntax: 	noise_handshake_timeout time;
 Default: 	noise_handshake_timeout 60s;
-Context: 	stream, server
+Context: 	noise_socket, server
 ```
 Specifies a timeout for the `Noise Protocol` handshake to complete.
 
