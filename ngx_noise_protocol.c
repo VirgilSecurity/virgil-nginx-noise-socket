@@ -1,8 +1,12 @@
+/*
+ * Copyright (C) Maxim Grigoryev
+ * Copyright (C) Virgil Security, Inc.
+ */
 
 #include "ngx_noise_protocol.h"
 
-static const char strProtocolName[]="Noise_XX_25519_AESGCM_SHA256";
-static const char strPrologue[]="Virgil";
+static const char strProtocolName[] = "Noise_XX_25519_AESGCM_SHA256";
+static const char strPrologue[] = "Virgil";
 
 ngx_int_t ngx_noise_protocol_init_handshake(NOISE_CTX *noise_ctx,
         noise_protocol_conn_t *noise_conn, ngx_noise_role_e noise_role)
@@ -15,10 +19,11 @@ ngx_int_t ngx_noise_protocol_init_handshake(NOISE_CTX *noise_ctx,
     if ((noise_role != NGX_NSOC_CLIENT_ROLE)
             && (noise_role != NGX_NSOC_SERVER_ROLE))
         return NGX_ERROR;
-    if (noise_init() != NOISE_ERROR_NONE) return NGX_ERROR;
+    if (noise_init() != NOISE_ERROR_NONE)
+        return NGX_ERROR;
 
     noise_conn->NoisePrologue = (void *) strPrologue;
-    noise_conn->NoisePrologueLen = sizeof(strPrologue)-1;
+    noise_conn->NoisePrologueLen = sizeof(strPrologue) - 1;
 
     if (noise_role == NGX_NSOC_CLIENT_ROLE) {
         role = NOISE_ROLE_INITIATOR;
@@ -65,7 +70,7 @@ ngx_int_t ngx_noise_protocol_init_handshake(NOISE_CTX *noise_ctx,
 ngx_int_t ngx_noise_protocol_load_private_key(const unsigned char *filename,
         uint8_t *key, size_t len)
 {
-    FILE *file = fopen((const char *)filename, "rb");
+    FILE *file = fopen((const char *) filename, "rb");
     size_t posn = 0;
     int ch;
     if (len > NOISE_PROTOCOL_MAX_DH_KEY_LEN) {
@@ -89,10 +94,10 @@ ngx_int_t ngx_noise_protocol_load_private_key(const unsigned char *filename,
     return NGX_OK;
 }
 
-ngx_int_t ngx_noise_protocol_load_public_key(const unsigned char *filename, uint8_t *key,
-        size_t len)
+ngx_int_t ngx_noise_protocol_load_public_key(const unsigned char *filename,
+        uint8_t *key, size_t len)
 {
-    FILE *file = fopen((const char *)filename, "rb");
+    FILE *file = fopen((const char *) filename, "rb");
     uint32_t group = 0;
     size_t group_size = 0;
     uint32_t digit = 0;
@@ -153,4 +158,22 @@ ngx_int_t ngx_noise_protocol_load_public_key(const unsigned char *filename, uint
     }
     fclose(file);
     return NGX_OK;
+}
+
+void ngx_noise_protocol_log_error(ngx_int_t err, char* strObjError,
+        ngx_log_t *log, ngx_uint_t log_level)
+{
+    ngx_int_t result;
+    char strerr[30];
+
+    result = noise_strerror(err, strerr, sizeof(strerr));
+
+    if (!result) {
+        ngx_log_debug2(
+                log_level, log, 0, "NOISE_PROTOCOL %s error: %s", strObjError,
+                strerr);
+    } else {
+        ngx_log_debug0(log_level, log, 0, "NOISE_PROTOCOL error log");
+    }
+
 }

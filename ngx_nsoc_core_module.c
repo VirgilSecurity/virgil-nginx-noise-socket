@@ -86,11 +86,11 @@ static ngx_command_t  ngx_nsoc_core_commands[] = {
       offsetof(ngx_nsoc_core_srv_conf_t, tcp_nodelay),
       NULL },
 
-    { ngx_string("preread_buffer_size"),
+    { ngx_string("nsoc_buffer_size"),
       NGX_NSOC_MAIN_CONF|NGX_NSOC_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_size_slot,
       NGX_NSOC_SRV_CONF_OFFSET,
-      offsetof(ngx_nsoc_core_srv_conf_t, preread_buffer_size),
+      offsetof(ngx_nsoc_core_srv_conf_t,nsoc_buffer_size ),
       NULL },
 
     { ngx_string("preread_timeout"),
@@ -223,7 +223,7 @@ ngx_nsoc_core_preread_phase(ngx_nsoc_session_t *s,
     while (rc == NGX_AGAIN) {
 
         if (c->buffer == NULL) {
-            c->buffer = ngx_create_temp_buf(c->pool, cscf->preread_buffer_size);
+            c->buffer = ngx_create_temp_buf(c->pool, cscf->nsoc_buffer_size);
             if (c->buffer == NULL) {
                 rc = NGX_ERROR;
                 break;
@@ -417,7 +417,7 @@ ngx_nsoc_core_create_srv_conf(ngx_conf_t *cf)
     cscf->line = cf->conf_file->line;
     cscf->resolver_timeout = NGX_CONF_UNSET_MSEC;
     cscf->tcp_nodelay = NGX_CONF_UNSET;
-    cscf->preread_buffer_size = NGX_CONF_UNSET_SIZE;
+    cscf->nsoc_buffer_size = NGX_CONF_UNSET_SIZE;
     cscf->preread_timeout = NGX_CONF_UNSET_MSEC;
 
     return cscf;
@@ -468,8 +468,14 @@ ngx_nsoc_core_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_value(conf->tcp_nodelay, prev->tcp_nodelay, 1);
 
-    ngx_conf_merge_size_value(conf->preread_buffer_size,
-                              prev->preread_buffer_size, 16384);
+    ngx_conf_merge_size_value(conf->nsoc_buffer_size,
+                              prev->nsoc_buffer_size, NOISE_PROTOCOL_PAYLOAD_SIZE);
+
+    if (conf->nsoc_buffer_size > NOISE_PROTOCOL_PAYLOAD_SIZE) {
+        ngx_log_error(
+                NGX_LOG_EMERG, cf->log, 0, "noise socket responder buffer too big");
+        return NGX_CONF_ERROR ;
+    }
 
     ngx_conf_merge_msec_value(conf->preread_timeout,
                               prev->preread_timeout, 30000);
@@ -707,18 +713,6 @@ ngx_nsoc_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             continue;
         }
 
- /*        if (ngx_strcmp(value[i].data, "ssl") == 0) {
-#if (NGX_NSOC_SSL)
-            ls->ssl = 1;
-            continue;
-#else
-            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                               "the \"ssl\" parameter requires "
-                               "ngx_nsoc_ssl_module");
-            return NGX_CONF_ERROR;
-#endif
-        }*/
-
         if (ngx_strncmp(value[i].data, "so_keepalive=", 13) == 0) {
 
             if (ngx_strcmp(&value[i].data[13], "on") == 0) {
@@ -827,11 +821,6 @@ ngx_nsoc_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         if (ls->noise_on) {
             return "\"noise\" parameter is incompatible with \"udp\"";
         }
-/*#if (NGX_NSOC_SSL)
-        if (ls->ssl) {
-            return "\"ssl\" parameter is incompatible with \"udp\"";
-        }
-#endif*/
 
         if (ls->so_keepalive) {
             return "\"so_keepalive\" parameter is incompatible with \"udp\"";

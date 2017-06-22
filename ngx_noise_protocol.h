@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) Maxim Grigoryev
+ * Copyright (C) Virgil Security, Inc.
+ */
+
 #ifndef _NGX_NOISE_PROTOCOL_H_INCLUDED_
 #define _NGX_NOISE_PROTOCOL_H_INCLUDED_
 
@@ -8,7 +13,9 @@
 #define NOISE_PROTOCOL_CURVE448_KEY_LEN 56
 
 #define NOISE_PROTOCOL_MAX_DH_KEY_LEN 2048
-#define NOISE_PROTOCOL_PAYLOAD_SIZE 65536
+#define NOISE_PROTOCOL_PAYLOAD_SIZE 65519
+#define NOISE_PROTOCOL_MAC_DATA_SIZE 16
+#define NOISE_PROTOCOL_MAX_HANDSHAKE_LEN NOISE_PROTOCOL_CURVE25519_KEY_LEN*2+NOISE_PROTOCOL_MAC_DATA_SIZE*2
 
 typedef struct noise_ctx_st {
         ngx_array_t *private_keys;
@@ -36,4 +43,6 @@ ngx_int_t ngx_noise_protocol_load_private_key(const unsigned char *filename,
         uint8_t *key, size_t len);
 ngx_int_t ngx_noise_protocol_load_public_key(const unsigned char *filename, uint8_t *key,
         size_t len);
+void ngx_noise_protocol_log_error(ngx_int_t err, char* strError, ngx_log_t *log,
+        ngx_uint_t log_level);
 #endif

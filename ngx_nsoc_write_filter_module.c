@@ -200,7 +200,7 @@ static ngx_int_t ngx_nsoc_write_filter(ngx_nsoc_session_t *s,
         }
 
         ngx_log_error(
-                NGX_LOG_ALERT, c->log, 0, "the NOISE output chain is empty");
+                NGX_LOG_ALERT, c->log, 0, "the nsoc output chain is empty");
 
         ngx_debug_point();
 
@@ -210,7 +210,7 @@ static ngx_int_t ngx_nsoc_write_filter(ngx_nsoc_session_t *s,
     chain = c->send_chain(c, *out, 0);
 
     ngx_log_debug1(
-            NGX_LOG_DEBUG_STREAM, c->log, 0, "NOISE write filter %p", chain);
+            NGX_LOG_DEBUG_EVENT, c->log, 0, "nsoc write filter %p", chain);
 
     if (chain == NGX_CHAIN_ERROR) {
         c->error = 1;

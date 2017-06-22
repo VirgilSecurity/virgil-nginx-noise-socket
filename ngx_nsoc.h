@@ -162,7 +162,7 @@ typedef struct {
         ngx_uint_t line;
 
         ngx_flag_t tcp_nodelay;
-        size_t preread_buffer_size;
+        size_t nsoc_buffer_size;
         ngx_msec_t preread_timeout;
 
         ngx_log_t *error_log;

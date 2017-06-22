@@ -26,7 +26,7 @@ typedef struct {
     ngx_uint_t responses;
     ngx_uint_t next_upstream_tries;
     ngx_flag_t next_upstream;
-    //ngx_flag_t proxy_protocol;
+
     ngx_nsoc_upstream_local_t *local;
 
     ngx_flag_t noise_enable;
@@ -38,6 +38,7 @@ typedef struct {
 
     ngx_nsoc_upstream_srv_conf_t *upstream;
     ngx_nsoc_complex_value_t *upstream_value;
+
 } ngx_nsoc_proxy_srv_conf_t;
 
 static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s);
@@ -57,38 +58,23 @@ static ngx_int_t ngx_nsoc_proxy_test_connect(ngx_connection_t *c);
 static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
         ngx_uint_t from_upstream, ngx_uint_t do_write);
 static void ngx_nsoc_proxy_next_upstream(ngx_nsoc_session_t *s);
-static void ngx_nsoc_proxy_finalize(ngx_nsoc_session_t *s,
-        ngx_uint_t rc);
-static u_char *ngx_nsoc_proxy_log_error(ngx_log_t *log, u_char *buf,
-        size_t len);
+static void ngx_nsoc_proxy_finalize(ngx_nsoc_session_t *s, ngx_uint_t rc);
+static u_char *ngx_nsoc_proxy_log_error(ngx_log_t *log, u_char *buf, size_t len);
 
 static void *ngx_nsoc_proxy_create_srv_conf(ngx_conf_t *cf);
 static char *ngx_nsoc_proxy_merge_srv_conf(ngx_conf_t *cf, void *parent,
         void *child);
-static char *ngx_nsoc_proxy_pass(ngx_conf_t *cf, ngx_command_t *cmd,
-        void *conf);
-static char *ngx_nsoc_proxy_bind(ngx_conf_t *cf, ngx_command_t *cmd,
-        void *conf);
+static char *ngx_nsoc_proxy_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static char *ngx_nsoc_proxy_bind(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
 /*noise*/
 
-static void ngx_nsoc_proxy_noise_init_connection(
-        ngx_nsoc_session_t *s);
+static void ngx_nsoc_proxy_noise_init_connection(ngx_nsoc_session_t *s);
 static void ngx_nsoc_proxy_noise_handshake(ngx_connection_t *pc);
 static ngx_int_t ngx_nsoc_proxy_set_noisesocket(ngx_conf_t *cf,
         ngx_nsoc_proxy_srv_conf_t *pscf);
 
 /*end noise*/
-
-static ngx_conf_deprecated_t ngx_conf_deprecated_proxy_downstream_buffer =
-{ ngx_conf_deprecated,
-  "proxy_downstream_buffer",
-  "proxy_buffer_size" };
-
-static ngx_conf_deprecated_t ngx_conf_deprecated_proxy_upstream_buffer =
-{ ngx_conf_deprecated,
-  "proxy_upstream_buffer",
-  "proxy_buffer_size" };
 
 static ngx_command_t ngx_nsoc_proxy_commands[] =
 {
@@ -127,20 +113,6 @@ static ngx_command_t ngx_nsoc_proxy_commands[] =
     NGX_NSOC_SRV_CONF_OFFSET,
     offsetof(ngx_nsoc_proxy_srv_conf_t, buffer_size),
     NULL },
-
-  { ngx_string("proxy_downstream_buffer"),
-    NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_TAKE1,
-    ngx_conf_set_size_slot,
-    NGX_NSOC_SRV_CONF_OFFSET,
-    offsetof(ngx_nsoc_proxy_srv_conf_t, buffer_size),
-    &ngx_conf_deprecated_proxy_downstream_buffer },
-
-  { ngx_string("proxy_upstream_buffer"),
-    NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_TAKE1,
-    ngx_conf_set_size_slot,
-    NGX_NSOC_SRV_CONF_OFFSET,
-    offsetof(ngx_nsoc_proxy_srv_conf_t, buffer_size),
-    &ngx_conf_deprecated_proxy_upstream_buffer },
 
   { ngx_string("proxy_upload_rate"),
     NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_TAKE1,
@@ -238,7 +210,6 @@ ngx_module_t ngx_nsoc_proxy_module =
   NGX_MODULE_V1_PADDING
 };
 
-
 static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s)
 {
     u_char *p;
@@ -320,8 +291,7 @@ static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s)
     } else {
         host = &u->resolved->host;
 
-        umcf = ngx_nsoc_get_module_main_conf(
-                s, ngx_nsoc_upstream_module);
+        umcf = ngx_nsoc_get_module_main_conf(s, ngx_nsoc_upstream_module);
 
         uscfp = umcf->upstreams.elts;
 
@@ -341,19 +311,17 @@ static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s)
         if (u->resolved->sockaddr) {
 
             if (u->resolved->port
-                    == 0 && u->resolved->sockaddr->sa_family != AF_UNIX) {
+                    == 0&& u->resolved->sockaddr->sa_family != AF_UNIX) {
                 ngx_log_error(
                         NGX_LOG_ERR, c->log, 0, "no port in upstream \"%V\"",
                         host);
-                ngx_nsoc_proxy_finalize(
-                        s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+                ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
                 return;
             }
 
             if (ngx_nsoc_upstream_create_round_robin_peer(
                     s, u->resolved) != NGX_OK) {
-                ngx_nsoc_proxy_finalize(
-                        s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+                ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
                 return;
             }
 
@@ -371,8 +339,7 @@ static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s)
 
         temp.name = *host;
 
-        cscf = ngx_nsoc_get_module_srv_conf(
-                s, ngx_nsoc_core_module);
+        cscf = ngx_nsoc_get_module_srv_conf(s, ngx_nsoc_core_module);
 
         ctx = ngx_resolve_start(cscf->resolver, &temp);
         if (ctx == NULL) {
@@ -734,8 +701,7 @@ static void ngx_nsoc_proxy_init_upstream(ngx_nsoc_session_t *s)
 }
 
 /*noise*/
-static void ngx_nsoc_proxy_noise_init_connection(
-        ngx_nsoc_session_t *s)
+static void ngx_nsoc_proxy_noise_init_connection(ngx_nsoc_session_t *s)
 {
     ngx_nsoc_upstream_t *u;
     ngx_nsoc_proxy_srv_conf_t *pscf;
@@ -758,15 +724,14 @@ static void ngx_nsoc_proxy_noise_init_connection(
 
     if (rc == NGX_AGAIN) {
 
-        if (!pc->write->timer_set) {
-            ngx_add_timer(pc->write, pscf->connect_timeout);
-        }
+        /*if (!pc->write->timer_set) {
+         ngx_add_timer(pc->write, pscf->connect_timeout);
+         }*/
 
-        s->client_noise_connection->handler =
-                ngx_nsoc_proxy_noise_handshake;
+        s->client_noise_connection->handler = ngx_nsoc_proxy_noise_handshake;
         return;
     }
-    if(rc == NGX_ERROR) {
+    if (rc == NGX_ERROR) {
         ngx_log_error(
                 NGX_LOG_ERR, s->connection->log, 0,
                 "NOISE error client handshaking");
@@ -785,6 +750,23 @@ static void ngx_nsoc_proxy_noise_handshake(ngx_connection_t *pc)
     s = pc->data;
 
     //pscf = ngx_nsoc_get_module_srv_conf(s, ngx_nsoc_proxy_module);
+
+    ngx_log_debug8(
+            NGX_LOG_DEBUG_EVENT,
+            pc->log,
+            0,
+            "wew status: act:%d dis:%d, rdy:%d eof:%d del:%d peof:%d pos:%d clo:%d",
+            pc->write->active, pc->write->disabled, pc->write->ready,
+            pc->write->eof, pc->write->delayed, pc->write->pending_eof,
+            pc->write->posted, pc->write->closed);
+    ngx_log_debug8(
+            NGX_LOG_DEBUG_EVENT,
+            pc->log,
+            0,
+            "rew status: act:%d dis:%d, rdy:%d eof:%d del:%d peof:%d pos:%d clo:%d",
+            pc->read->active, pc->read->disabled, pc->read->ready,
+            pc->read->eof, pc->read->delayed, pc->read->pending_eof,
+            pc->read->posted, pc->read->closed);
 
     if (s->client_noise_connection->handshaked) {
 
@@ -1291,15 +1273,6 @@ static void ngx_nsoc_proxy_next_upstream(ngx_nsoc_session_t *s)
                 NGX_LOG_DEBUG_STREAM, s->connection->log, 0,
                 "close proxy upstream connection: %d", pc->fd);
 
-#if (NGX_NSOC_SSL)
-        if (pc->ssl) {
-            pc->ssl->no_wait_shutdown = 1;
-            pc->ssl->no_send_shutdown = 1;
-
-            (void) ngx_ssl_shutdown(pc);
-        }
-#endif
-
         u->state->bytes_received = u->received;
         u->state->bytes_sent = pc->sent;
 
@@ -1310,8 +1283,7 @@ static void ngx_nsoc_proxy_next_upstream(ngx_nsoc_session_t *s)
     ngx_nsoc_proxy_connect(s);
 }
 
-static void ngx_nsoc_proxy_finalize(ngx_nsoc_session_t *s,
-        ngx_uint_t rc)
+static void ngx_nsoc_proxy_finalize(ngx_nsoc_session_t *s, ngx_uint_t rc)
 {
     ngx_connection_t *pc;
     ngx_nsoc_upstream_t *u;
@@ -1448,7 +1420,14 @@ ngx_nsoc_proxy_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_msec_value(
             conf->next_upstream_timeout, prev->next_upstream_timeout, 0);
 
-    ngx_conf_merge_size_value(conf->buffer_size, prev->buffer_size, 65536);
+    ngx_conf_merge_size_value(
+            conf->buffer_size, prev->buffer_size, NOISE_PROTOCOL_PAYLOAD_SIZE);
+
+    if (conf->buffer_size > NOISE_PROTOCOL_PAYLOAD_SIZE) {
+        ngx_log_error(
+                NGX_LOG_EMERG, cf->log, 0, "noise socket proxy buffer too big");
+        return NGX_CONF_ERROR ;
+    }
 
     ngx_conf_merge_size_value(conf->upload_rate, prev->upload_rate, 0);
 
@@ -1467,11 +1446,12 @@ ngx_nsoc_proxy_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
     /*noise*/
     ngx_conf_merge_value(conf->noise_enable, prev->noise_enable, 0);
 
-    ngx_conf_merge_str_value(conf->client_private_key_file, prev->client_private_key_file, "");
-    ngx_conf_merge_str_value(conf->server_public_key_file, prev->server_public_key_file, "");
+    ngx_conf_merge_str_value(
+            conf->client_private_key_file, prev->client_private_key_file, "");
+    ngx_conf_merge_str_value(
+            conf->server_public_key_file, prev->server_public_key_file, "");
 
-    if (conf->noise_enable
-            && ngx_nsoc_proxy_set_noisesocket(cf, conf) != NGX_OK) {
+    if (conf->noise_enable && ngx_nsoc_proxy_set_noisesocket(cf, conf) != NGX_OK) {
         return NGX_CONF_ERROR ;
     }
 
@@ -1509,19 +1489,20 @@ static ngx_int_t ngx_nsoc_proxy_set_noisesocket(ngx_conf_t *cf,
     cln->data = pscf->noise;
 
     if (pscf->client_private_key_file.len == 0)
-        return NGX_ERROR ;
+        return NGX_ERROR;
 
     if (pscf->server_public_key_file.len != 0) {
         public_key = ngx_array_create(cf->pool, 1, sizeof(ngx_str_t));
         key = public_key->elts;
         key->len = NOISE_PROTOCOL_CURVE25519_KEY_LEN;
-        key->data = ngx_pnalloc(
-                cf->pool, NOISE_PROTOCOL_CURVE25519_KEY_LEN);
+        key->data = ngx_pnalloc(cf->pool, NOISE_PROTOCOL_CURVE25519_KEY_LEN);
+
         if (ngx_noise_protocol_load_public_key(
                 pscf->server_public_key_file.data, key->data,
                 NOISE_PROTOCOL_CURVE25519_KEY_LEN) != NGX_OK) {
             return NGX_ERROR;
         }
+
         public_key->nelts = 1;
         pscf->noise->ctx->public_keys = public_key;
     }
@@ -1530,13 +1511,16 @@ static ngx_int_t ngx_nsoc_proxy_set_noisesocket(ngx_conf_t *cf,
     key = private_key->elts;
     key->len = NOISE_PROTOCOL_CURVE25519_KEY_LEN;
     key->data = ngx_pnalloc(cf->pool, NOISE_PROTOCOL_CURVE25519_KEY_LEN);
+
     if (ngx_noise_protocol_load_private_key(
             pscf->client_private_key_file.data, key->data,
             NOISE_PROTOCOL_CURVE25519_KEY_LEN) != NGX_OK) {
         return NGX_ERROR;
     }
-    private_key->nelts=1;
+
+    private_key->nelts = 1;
     pscf->noise->ctx->private_keys = private_key;
+    pscf->noise->handshake_timeout = pscf->connect_timeout;
 
     return NGX_OK;
 }
@@ -1558,8 +1542,7 @@ ngx_nsoc_proxy_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return "is duplicate";
     }
 
-    cscf = ngx_nsoc_conf_get_module_srv_conf(
-            cf, ngx_nsoc_core_module);
+    cscf = ngx_nsoc_conf_get_module_srv_conf(cf, ngx_nsoc_core_module);
 
     cscf->handler = ngx_nsoc_proxy_handler;
 
@@ -1642,8 +1625,7 @@ ngx_nsoc_proxy_bind(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     pscf->local = local;
 
     if (cv.lengths) {
-        local->value = ngx_palloc(
-                cf->pool, sizeof(ngx_nsoc_complex_value_t));
+        local->value = ngx_palloc(cf->pool, sizeof(ngx_nsoc_complex_value_t));
         if (local->value == NULL) {
             return NGX_CONF_ERROR ;
         }
@@ -1660,17 +1642,17 @@ ngx_nsoc_proxy_bind(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
                 cf->pool, local->addr, value[1].data, value[1].len);
 
         switch (rc) {
-        case NGX_OK:
-            local->addr->name = value[1];
-        break;
+            case NGX_OK:
+                local->addr->name = value[1];
+                break;
 
-        case NGX_DECLINED:
-            ngx_conf_log_error(
-                    NGX_LOG_EMERG, cf, 0, "invalid address \"%V\"", &value[1]);
-            /* fall through */
+            case NGX_DECLINED:
+                ngx_conf_log_error(
+                NGX_LOG_EMERG, cf, 0, "invalid address \"%V\"", &value[1]);
+                /* fall through */
 
-        default:
-            return NGX_CONF_ERROR ;
+            default:
+                return NGX_CONF_ERROR ;
         }
     }
 
@@ -1685,8 +1667,7 @@ ngx_nsoc_proxy_bind(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 #endif
         } else {
             ngx_conf_log_error(
-                    NGX_LOG_EMERG, cf, 0, "invalid parameter \"%V\"",
-                    &value[2]);
+            NGX_LOG_EMERG, cf, 0, "invalid parameter \"%V\"", &value[2]);
             return NGX_CONF_ERROR ;
         }
     }
