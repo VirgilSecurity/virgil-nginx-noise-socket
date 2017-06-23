@@ -704,7 +704,7 @@ ssize_t ngx_nsoc_recv(ngx_connection_t *c, u_char *buf, size_t size)
             if (b->pos - b->start == nc->recv_size) {
                 noise_buffer_set_inout(
                         mbuf, b->start, nc->recv_size,
-                        NGX_NSOC_BUFSIZE - NGX_NSOC_LEN_FIELD_SIZE);
+						nc->recv_size);
 
                 n = noise_cipherstate_decrypt(
                         nc->noise_connection.NoiseRecvCipherObj, &mbuf);
@@ -714,7 +714,10 @@ ssize_t ngx_nsoc_recv(ngx_connection_t *c, u_char *buf, size_t size)
                             n, "decrypt", c->log, NGX_LOG_DEBUG_EVENT);
 
                     c->read->error = 1;
-                    b->temporary = 1;
+
+                    ngx_pfree(c->pool, b->start);
+                    ngx_pfree(c->pool, b);
+
                     nc->recv_size = 0;
                     nc->recv_buf = NULL;
                     return NGX_ERROR;
@@ -727,10 +730,14 @@ ssize_t ngx_nsoc_recv(ngx_connection_t *c, u_char *buf, size_t size)
                 ngx_memcpy(buf, mbuf.data, mbuf.size);
 
                 c->read->ready = 1;
-                b->temporary = 1;
+
+                ngx_pfree(c->pool, b->start);
+                ngx_pfree(c->pool, b);
+
+                nc->recv_buf = NULL;
                 nc->last = 0;
                 nc->recv_size = 0;
-                nc->recv_buf = NULL;
+
                 return mbuf.size;
             }
 
@@ -738,9 +745,12 @@ ssize_t ngx_nsoc_recv(ngx_connection_t *c, u_char *buf, size_t size)
         }
 
         if (n != NGX_AGAIN) {
-            b->temporary = 1;
-            nc->recv_size = 0;
+
+        	ngx_pfree(c->pool, b->start);
+            ngx_pfree(c->pool, b);
+
             nc->recv_buf = NULL;
+            nc->recv_size = 0;
         }
 
         nc->last = n;
@@ -986,6 +996,12 @@ ssize_t ngx_nsoc_write(ngx_connection_t *c, u_char *data, size_t size)
             ngx_noise_protocol_log_error(
                     n, "encrypt", c->log, NGX_LOG_DEBUG_EVENT);
 
+            ngx_pfree(c->pool, b->start);
+            ngx_pfree(c->pool, b);
+
+            nc->send_buf = NULL;
+            nc->to_send = 0;
+
             return NGX_ERROR;
         }
 
@@ -1010,10 +1026,13 @@ ssize_t ngx_nsoc_write(ngx_connection_t *c, u_char *data, size_t size)
 
             if (b->pos == b->last) {
                 n = size;
+
                 ngx_pfree(c->pool, b->start);
                 ngx_pfree(c->pool, b);
+
                 nc->send_buf = NULL;
                 nc->to_send = 0;
+
                 return size;
             }
 
