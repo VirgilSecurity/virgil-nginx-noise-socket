@@ -116,3 +116,31 @@ Specifies a timeout for the `Noise Protocol` handshake to complete.
 The description of directives same, as for the [ngx_stream_proxy_module module](http://nginx.org/en/docs/stream/ngx_stream_proxy_module.html) only in `noise_socket` context.<br />
 `resolver`, `resolver_timeout`, `preread_timeout`, `tcp_nodelay`<br />
 The description of directives same, as for the [ngx_stream_core_module module](http://nginx.org/en/docs/stream/ngx_stream_core_module.html) only in `noise_socket` context.<br />
+
+## Keepalive connection configuring
+
+For setup of saving a noise socket session it is possible to use the following directives of nginx for frontend server http: 
+```nginx
+http {
+	...
+    proxy_http_version 1.1;
+    keepalive_requests 10;
+    keepalive_timeout 50s;
+	...
+	server {
+      ...
+      location {
+      	...
+      	proxy_set_header Connection keep-alive;
+        ...
+      }
+    }
+    ustream name {
+    	....
+    	keepalive 1;
+        ....
+    }
+}
+    
+```
+Directives are designated by comments "###For the noise socket connection keepalive setup...###" in the file of a test configuration `virgil-nginx-noise-socket/example/nginx.conf`
