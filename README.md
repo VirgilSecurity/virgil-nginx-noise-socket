@@ -9,6 +9,22 @@ Nginx module that implements Noise Socket Protocol by using Virgil Security infr
 
 ## Building of Nginx with the virgil-nginx-noise-socket module:
 
+#### list of dependences
+
+* Autoconf
+* Automake
+
+for Centos 7:
+* pcre
+* pcre-devel
+* pcre2
+* pcre2-devel
+* openssl-devel
+* flex
+* bison
+
+#### Building
+
 1. The virgil-nginx-noise-socket module is tested with nginx-1.12.0.
 2. Set [Noise-C](https://github.com/rweather/noise-c) library is necessary for building of the server.
 * How to build `Noise-C` it is described in [Noise-C Documentation](http://rweather.github.io/noise-c/index.html).
