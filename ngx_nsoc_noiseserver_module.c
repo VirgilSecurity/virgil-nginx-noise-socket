@@ -84,14 +84,63 @@ static ngx_int_t ngx_nsoc_noiseserver_handler(ngx_nsoc_session_t *s)
     ngx_int_t rv;
     ngx_connection_t *c;
     ngx_nsoc_noiseserver_conf_t *noisecf;
+    ngx_array_t *private_key, *public_key;
+    ngx_str_t *key;
+    ngx_nsoc_core_main_conf_t *cmcf;
 
     if (!s->noise_on) {
         return NGX_OK;
     }
 
     c = s->connection;
-
     noisecf = ngx_nsoc_get_module_srv_conf(s, ngx_nsoc_noiseserver_module);
+
+    if(noisecf->noise->ctx->private_keys == NULL) {
+        if (noisecf->server_private_key_file.len == 0){
+            ngx_log_error(NGX_LOG_EMERG, c->log, 0,
+                          "server private key file is not set");
+
+            return NGX_ERROR;
+        }
+
+        cmcf = ngx_nsoc_get_module_main_conf(s, ngx_nsoc_core_module);
+
+        private_key = ngx_array_create(cmcf->pool, 1, sizeof(ngx_str_t));
+        key = private_key->elts;
+        key->len = NOISE_PROTOCOL_CURVE25519_KEY_LEN;
+        key->data = ngx_pnalloc(cmcf->pool, NOISE_PROTOCOL_CURVE25519_KEY_LEN);
+        if (ngx_noise_protocol_load_private_key(
+                noisecf->server_private_key_file.data, key->data,
+                NOISE_PROTOCOL_CURVE25519_KEY_LEN) != NGX_OK) {
+            ngx_log_error(NGX_LOG_EMERG, c->log, 0,
+                          "unable to open server private key file %s",noisecf->server_private_key_file.data);
+
+            return NGX_ERROR;
+        }
+        private_key->nelts = 1;
+        noisecf->noise->ctx->private_keys = private_key;
+
+    }
+
+    if (noisecf->noise->ctx->public_keys == NULL) {
+		if (noisecf->client_public_key_file.len != 0) {
+			public_key = ngx_array_create(cmcf->pool, 1, sizeof(ngx_str_t));
+			key = public_key->elts;
+			key->len = NOISE_PROTOCOL_CURVE25519_KEY_LEN;
+			key->data = ngx_pnalloc(cmcf->pool,
+					NOISE_PROTOCOL_CURVE25519_KEY_LEN);
+			if (ngx_noise_protocol_load_public_key(
+					noisecf->client_public_key_file.data, key->data,
+					NOISE_PROTOCOL_CURVE25519_KEY_LEN) != NGX_OK) {
+	            ngx_log_error(NGX_LOG_EMERG, c->log, 0,
+	                          "unable to open client public key file %s",noisecf->client_public_key_file.data);
+
+	            return NGX_ERROR;
+			}
+			public_key->nelts = 1;
+			noisecf->noise->ctx->public_keys = public_key;
+		}
+	}
 
     if (s->server_noise_connection == NULL) {
         c->log->action = "NOISE handshaking";
@@ -235,42 +284,9 @@ static ngx_int_t ngx_nsoc_noiseserver_init(ngx_conf_t *cf)
 {
     ngx_nsoc_handler_pt *h;
     ngx_nsoc_core_main_conf_t *cmcf;
-    ngx_nsoc_noiseserver_conf_t *noisecf;
-    ngx_array_t *private_key, *public_key;
-    ngx_str_t *key;
 
-    noisecf = ngx_nsoc_conf_get_module_srv_conf(
-            cf, ngx_nsoc_noiseserver_module);
-
-    if (noisecf->server_private_key_file.len == 0)
-        return NGX_ERROR;
-
-    private_key = ngx_array_create(cf->pool, 1, sizeof(ngx_str_t));
-    key = private_key->elts;
-    key->len = NOISE_PROTOCOL_CURVE25519_KEY_LEN;
-    key->data = ngx_pnalloc(cf->pool, NOISE_PROTOCOL_CURVE25519_KEY_LEN);
-    if (ngx_noise_protocol_load_private_key(
-            noisecf->server_private_key_file.data, key->data,
-            NOISE_PROTOCOL_CURVE25519_KEY_LEN) != NGX_OK) {
-        return NGX_ERROR;
-    }
-    private_key->nelts = 1;
-    noisecf->noise->ctx->private_keys = private_key;
-
-    if (noisecf->client_public_key_file.len != 0) {
-        public_key = ngx_array_create(cf->pool, 1, sizeof(ngx_str_t));
-        key = public_key->elts;
-        key->len = NOISE_PROTOCOL_CURVE25519_KEY_LEN;
-        key->data = ngx_pnalloc(cf->pool, NOISE_PROTOCOL_CURVE25519_KEY_LEN);
-        if (ngx_noise_protocol_load_public_key(
-                noisecf->client_public_key_file.data, key->data,
-                NOISE_PROTOCOL_CURVE25519_KEY_LEN) != NGX_OK) {
-            return NGX_ERROR;
-        }
-        public_key->nelts = 1;
-        noisecf->noise->ctx->public_keys = public_key;
-    }
     cmcf = ngx_nsoc_conf_get_module_main_conf(cf, ngx_nsoc_core_module);
+    cmcf->pool = cf->pool;
 
     h = ngx_array_push(&cmcf->phases[NGX_NSOC_PROTECT_PHASE].handlers);
     if (h == NULL) {
