@@ -95,6 +95,8 @@ static ngx_int_t ngx_nsoc_noiseserver_handler(ngx_nsoc_session_t *s)
     c = s->connection;
     noisecf = ngx_nsoc_get_module_srv_conf(s, ngx_nsoc_noiseserver_module);
 
+    cmcf = ngx_nsoc_get_module_main_conf(s, ngx_nsoc_core_module);
+
     if(noisecf->noise->ctx->private_keys == NULL) {
         if (noisecf->server_private_key_file.len == 0){
             ngx_log_error(NGX_LOG_EMERG, c->log, 0,
@@ -102,8 +104,6 @@ static ngx_int_t ngx_nsoc_noiseserver_handler(ngx_nsoc_session_t *s)
 
             return NGX_ERROR;
         }
-
-        cmcf = ngx_nsoc_get_module_main_conf(s, ngx_nsoc_core_module);
 
         private_key = ngx_array_create(cmcf->pool, 1, sizeof(ngx_str_t));
         key = private_key->elts;
