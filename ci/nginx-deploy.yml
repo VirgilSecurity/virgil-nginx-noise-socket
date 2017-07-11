@@ -1,0 +1,50 @@
+---
+- hosts: nginx-noise
+  user: root
+  become: yes
+
+  tasks:
+    - name: "Check artifact dir exist"
+      file:
+        path: /opt/rpms
+        state: directory
+
+    - name: "Copy artifacts"
+      copy:
+        src: "./{{ rpm_name }}"
+        dest: /opt/rpms/
+
+    - name: "Stop nginx"
+      service:
+        name: nginx
+        state: stopped
+
+    - name: "Delete previous version of nginx package"
+      yum:
+        name: "virgil-nginx-noise-socket"
+        state: absent
+
+    - name: "Install new version of nginx artifacts"
+      yum:
+        name: "/opt/rpms/{{ rpm_name }}"
+        state: present
+
+    - name: "Deploy config file"
+      copy:
+        src: "nginx_configs/{{ansible_hostname}}.conf"
+        dest: /etc/nginx/nginx.conf
+
+    - name: "Deploy identity html file"
+      copy:
+        content: "{{ ansible_hostname }}"
+        dest: /usr/local/nginx/html/index.html
+
+    - name: "Restart nginx"
+      service:
+        name: nginx
+        state: restarted
+
+    - name: "Clean artifacts"
+      file:
+        path: "/opt/rpms/{{ rpm_name }}"
+        state: absent
