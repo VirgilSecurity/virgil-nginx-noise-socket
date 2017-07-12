@@ -9,6 +9,11 @@
         path: /opt/rpms
         state: directory
 
+    - name: "Clean rpm dir from failed build"
+      file:
+        path: /opt/rpms/
+        state: absent
+
     - name: "Copy artifacts"
       copy:
         src: "{{ rpm_name }}"
