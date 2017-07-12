@@ -11,7 +11,7 @@
 
     - name: "Copy artifacts"
       copy:
-        src: "./{{ rpm_name }}"
+        src: "{{ rpm_name }}"
         dest: /opt/rpms/
 
     - name: "Stop nginx"
