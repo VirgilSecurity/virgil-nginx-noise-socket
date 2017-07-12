@@ -1,3 +1,6 @@
 [nginx-noise]
 nginx-noise-lb-int.vrgl.net
 nginx-noise-backend-int.vrgl.net
+
+[nginx-noise:vars]
+ansible_ssh_private_key_file = ~/.ssh/nginx-noise
