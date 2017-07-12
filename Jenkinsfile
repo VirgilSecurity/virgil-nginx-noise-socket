@@ -14,8 +14,7 @@ stage('Get nginx sources'){
 
 stage('Build'){
     node("build-docker"){
-        //clearContentUnix()
-        deleteDir()
+        clearContentUnix()
         unstash "nginx-source"
         docker.image('centos:7').inside("--user root"){
             sh "yum install -y gcc make pcre pcre-devel pcre2 pcre2-devel openssl-devel autoconf automake flex bison git ruby ruby-devel curl libyaml-devel rpm-build"
