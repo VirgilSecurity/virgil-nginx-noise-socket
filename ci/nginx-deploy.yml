@@ -8,11 +8,7 @@
       file:
         path: /opt/rpms
         state: directory
-
-    - name: "Debug directory list"
-      shell: "ls -l"
-      register: output
-
+        
     - debug:
         msg:  "{{ output }}"
 
