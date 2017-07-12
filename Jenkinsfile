@@ -1,7 +1,6 @@
 stage('Get nginx sources'){
     node('master'){
-        //clearContentUnix()
-        deleteDir()
+        clearContentUnix()
         sh "wget https://nginx.org/download/nginx-1.12.0.tar.gz"
         sh "tar xfz nginx-1.12.0.tar.gz"
         sh "mkdir virgil-nginx-noise-socket"
