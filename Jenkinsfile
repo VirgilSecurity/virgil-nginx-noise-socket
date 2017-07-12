@@ -51,7 +51,9 @@ stage('Pack artifacts'){
 
 stage('Deploy artifacts'){
     node('master'){
-        sh "ansible-playbook -i ci/nginx-inventory ci/nginx-deploy.yml --extra-vars 'rpm_name=virgil-nginx-noise-socket-1.0.${BUILD_NUMBER}-1.x86_64.rpm'"
+        dir('nginx-1.12.0/virgil-nginx-noise-socket'){
+            sh "ansible-playbook -i ci/nginx-inventory ci/nginx-deploy.yml --extra-vars 'rpm_name=virgil-nginx-noise-socket-1.0.${BUILD_NUMBER}-1.x86_64.rpm'"
+        }
     }
 }
 
