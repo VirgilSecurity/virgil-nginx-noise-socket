@@ -1488,8 +1488,12 @@ static ngx_int_t ngx_nsoc_proxy_set_noisesocket(ngx_conf_t *cf,
     cln->handler = ngx_nsoc_cleanup_ctx;
     cln->data = pscf->noise;
 
-    if (pscf->client_private_key_file.len == 0)
+    if (pscf->client_private_key_file.len == 0){
+        ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
+                      "client private key file is not set");
+
         return NGX_ERROR;
+    }
 
     if (pscf->server_public_key_file.len != 0) {
         public_key = ngx_array_create(cf->pool, 1, sizeof(ngx_str_t));
@@ -1500,6 +1504,9 @@ static ngx_int_t ngx_nsoc_proxy_set_noisesocket(ngx_conf_t *cf,
         if (ngx_noise_protocol_load_public_key(
                 pscf->server_public_key_file.data, key->data,
                 NOISE_PROTOCOL_CURVE25519_KEY_LEN) != NGX_OK) {
+            ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
+                          "unable to open server public key file %s",pscf->server_public_key_file.data);
+
             return NGX_ERROR;
         }
 
@@ -1515,6 +1522,9 @@ static ngx_int_t ngx_nsoc_proxy_set_noisesocket(ngx_conf_t *cf,
     if (ngx_noise_protocol_load_private_key(
             pscf->client_private_key_file.data, key->data,
             NOISE_PROTOCOL_CURVE25519_KEY_LEN) != NGX_OK) {
+        ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
+                      "unable to open client private key file %s",pscf->client_private_key_file.data);
+
         return NGX_ERROR;
     }
 

@@ -137,6 +137,8 @@ typedef struct {
         ngx_array_t servers; /* ngx_nsoc_core_srv_conf_t */
         ngx_array_t listen; /* ngx_nsoc_listen_t */
 
+        ngx_pool_t *pool;
+
         ngx_nsoc_phase_engine_t phase_engine;
 
         ngx_hash_t variables_hash;
