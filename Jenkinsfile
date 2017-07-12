@@ -45,7 +45,9 @@ stage('Build'){
 stage('Deploy artifacts'){
     node('master'){
         dir('nginx-1.12.0/virgil-nginx-noise-socket'){
-            unstash 'nginx-rpm'
+            dir('ci'){
+                unstash 'nginx-rpm'
+            }
             sh "ls -l"
             sh "ansible-playbook -i ci/nginx-inventory ci/nginx-deploy.yml --extra-vars 'rpm_name=virgil-nginx-noise-socket-1.0.${BUILD_NUMBER}-1.x86_64.rpm'"
             archiveArtifacts("*.rpm")
