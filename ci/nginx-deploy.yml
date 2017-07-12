@@ -8,9 +8,6 @@
       file:
         path: /opt/rpms
         state: directory
-        
-    - debug:
-        msg:  "{{ output }}"
 
     - name: "Copy artifacts"
       copy:
