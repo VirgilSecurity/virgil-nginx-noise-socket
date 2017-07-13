@@ -1477,6 +1477,9 @@ static ngx_int_t ngx_nsoc_proxy_set_noisesocket(ngx_conf_t *cf,
     pscf->noise->log = cf->log;
 
     if (ngx_nsoc_create(pscf->noise, NULL) != NGX_OK) {
+        ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
+                      "noise proxy module merge_conf error: unable to create noise ctx");
+
         return NGX_ERROR;
     }
 

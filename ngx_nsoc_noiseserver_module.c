@@ -266,6 +266,8 @@ ngx_nsoc_noiseserver_merge_conf(ngx_conf_t *cf, void *parent, void *child)
     conf->noise->handshake_timeout = conf->handshake_timeout;
 
     if (ngx_nsoc_create(conf->noise, NULL) != NGX_OK) {
+        ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
+                      "noise server module merge_conf error: unable to create noise ctx");
         return NGX_CONF_ERROR ;
     }
 
