@@ -6,63 +6,63 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 
-#include "ngx_nsoc.h"
+#include "ngx_nlnk.h"
 
-static ngx_int_t ngx_nsoc_upstream_add_variables(ngx_conf_t *cf);
-static ngx_int_t ngx_nsoc_upstream_addr_variable(
-        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
+static ngx_int_t ngx_nlnk_upstream_add_variables(ngx_conf_t *cf);
+static ngx_int_t ngx_nlnk_upstream_addr_variable(
+        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
         uintptr_t data);
-static ngx_int_t ngx_nsoc_upstream_response_time_variable(
-        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
+static ngx_int_t ngx_nlnk_upstream_response_time_variable(
+        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
         uintptr_t data);
-static ngx_int_t ngx_nsoc_upstream_bytes_variable(
-        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
+static ngx_int_t ngx_nlnk_upstream_bytes_variable(
+        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
         uintptr_t data);
 
-static char *ngx_nsoc_upstream(ngx_conf_t *cf, ngx_command_t *cmd,
+static char *ngx_nlnk_upstream(ngx_conf_t *cf, ngx_command_t *cmd,
         void *dummy);
-static char *ngx_nsoc_upstream_server(ngx_conf_t *cf, ngx_command_t *cmd,
+static char *ngx_nlnk_upstream_server(ngx_conf_t *cf, ngx_command_t *cmd,
         void *conf);
-static void *ngx_nsoc_upstream_create_main_conf(ngx_conf_t *cf);
-static char *ngx_nsoc_upstream_init_main_conf(ngx_conf_t *cf, void *conf);
+static void *ngx_nlnk_upstream_create_main_conf(ngx_conf_t *cf);
+static char *ngx_nlnk_upstream_init_main_conf(ngx_conf_t *cf, void *conf);
 
-static ngx_command_t ngx_nsoc_upstream_commands[] =
+static ngx_command_t ngx_nlnk_upstream_commands[] =
 {
 
   { ngx_string("upstream"),
-    NGX_NSOC_MAIN_CONF | NGX_CONF_BLOCK | NGX_CONF_TAKE1,
-    ngx_nsoc_upstream,
+    NGX_NLNK_MAIN_CONF | NGX_CONF_BLOCK | NGX_CONF_TAKE1,
+    ngx_nlnk_upstream,
     0,
     0,
     NULL },
 
   { ngx_string("server"),
-    NGX_NSOC_UPS_CONF | NGX_CONF_1MORE,
-    ngx_nsoc_upstream_server,
-    NGX_NSOC_SRV_CONF_OFFSET,
+    NGX_NLNK_UPS_CONF | NGX_CONF_1MORE,
+    ngx_nlnk_upstream_server,
+    NGX_NLNK_SRV_CONF_OFFSET,
     0,
     NULL },
 
   ngx_null_command
 };
 
-static ngx_nsoc_module_t ngx_nsoc_upstream_module_ctx =
-{ ngx_nsoc_upstream_add_variables, /* preconfiguration */
+static ngx_nlnk_module_t ngx_nlnk_upstream_module_ctx =
+{ ngx_nlnk_upstream_add_variables, /* preconfiguration */
   NULL, /* postconfiguration */
 
-  ngx_nsoc_upstream_create_main_conf, /* create main configuration */
-  ngx_nsoc_upstream_init_main_conf, /* init main configuration */
+  ngx_nlnk_upstream_create_main_conf, /* create main configuration */
+  ngx_nlnk_upstream_init_main_conf, /* init main configuration */
 
   NULL, /* create server configuration */
   NULL /* merge server configuration */
 };
 
-ngx_module_t ngx_nsoc_upstream_module =
+ngx_module_t ngx_nlnk_upstream_module =
 {
   NGX_MODULE_V1,
-  &ngx_nsoc_upstream_module_ctx, /* module context */
-  ngx_nsoc_upstream_commands, /* module directives */
-  NGX_NSOC_MODULE, /* module type */
+  &ngx_nlnk_upstream_module_ctx, /* module context */
+  ngx_nlnk_upstream_commands, /* module directives */
+  NGX_NLNK_MODULE, /* module type */
   NULL, /* init master */
   NULL, /* init module */
   NULL, /* init process */
@@ -73,49 +73,49 @@ ngx_module_t ngx_nsoc_upstream_module =
   NGX_MODULE_V1_PADDING
 };
 
-static ngx_nsoc_variable_t ngx_nsoc_upstream_vars[] =
+static ngx_nlnk_variable_t ngx_nlnk_upstream_vars[] =
 {
 
   { ngx_string("upstream_addr"),
     NULL,
-    ngx_nsoc_upstream_addr_variable,
+    ngx_nlnk_upstream_addr_variable,
     0,
-    NGX_NSOC_VAR_NOCACHEABLE,
+    NGX_NLNK_VAR_NOCACHEABLE,
     0 },
 
   { ngx_string("upstream_bytes_sent"),
     NULL,
-    ngx_nsoc_upstream_bytes_variable,
+    ngx_nlnk_upstream_bytes_variable,
     0,
-    NGX_NSOC_VAR_NOCACHEABLE,
+    NGX_NLNK_VAR_NOCACHEABLE,
     0 },
 
   { ngx_string("upstream_connect_time"),
     NULL,
-    ngx_nsoc_upstream_response_time_variable,
+    ngx_nlnk_upstream_response_time_variable,
     2,
-    NGX_NSOC_VAR_NOCACHEABLE,
+    NGX_NLNK_VAR_NOCACHEABLE,
     0 },
 
   { ngx_string("upstream_first_byte_time"),
     NULL,
-    ngx_nsoc_upstream_response_time_variable,
+    ngx_nlnk_upstream_response_time_variable,
     1,
-    NGX_NSOC_VAR_NOCACHEABLE,
+    NGX_NLNK_VAR_NOCACHEABLE,
     0 },
 
   { ngx_string("upstream_session_time"),
     NULL,
-    ngx_nsoc_upstream_response_time_variable,
+    ngx_nlnk_upstream_response_time_variable,
     0,
-    NGX_NSOC_VAR_NOCACHEABLE,
+    NGX_NLNK_VAR_NOCACHEABLE,
     0 },
 
   { ngx_string("upstream_bytes_received"),
     NULL,
-    ngx_nsoc_upstream_bytes_variable,
+    ngx_nlnk_upstream_bytes_variable,
     1,
-    NGX_NSOC_VAR_NOCACHEABLE,
+    NGX_NLNK_VAR_NOCACHEABLE,
     0 },
 
   { ngx_null_string,
@@ -126,12 +126,12 @@ static ngx_nsoc_variable_t ngx_nsoc_upstream_vars[] =
     0 }
 };
 
-static ngx_int_t ngx_nsoc_upstream_add_variables(ngx_conf_t *cf)
+static ngx_int_t ngx_nlnk_upstream_add_variables(ngx_conf_t *cf)
 {
-    ngx_nsoc_variable_t *var, *v;
+    ngx_nlnk_variable_t *var, *v;
 
-    for (v = ngx_nsoc_upstream_vars; v->name.len; v++) {
-        var = ngx_nsoc_add_variable(cf, &v->name, v->flags);
+    for (v = ngx_nlnk_upstream_vars; v->name.len; v++) {
+        var = ngx_nlnk_add_variable(cf, &v->name, v->flags);
         if (var == NULL) {
             return NGX_ERROR;
         }
@@ -143,14 +143,14 @@ static ngx_int_t ngx_nsoc_upstream_add_variables(ngx_conf_t *cf)
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nsoc_upstream_addr_variable(
-        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
+static ngx_int_t ngx_nlnk_upstream_addr_variable(
+        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
         uintptr_t data)
 {
     u_char *p;
     size_t len;
     ngx_uint_t i;
-    ngx_nsoc_upstream_state_t *state;
+    ngx_nlnk_upstream_state_t *state;
 
     v->valid = 1;
     v->no_cacheable = 0;
@@ -199,14 +199,14 @@ static ngx_int_t ngx_nsoc_upstream_addr_variable(
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nsoc_upstream_bytes_variable(
-        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
+static ngx_int_t ngx_nlnk_upstream_bytes_variable(
+        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
         uintptr_t data)
 {
     u_char *p;
     size_t len;
     ngx_uint_t i;
-    ngx_nsoc_upstream_state_t *state;
+    ngx_nlnk_upstream_state_t *state;
 
     v->valid = 1;
     v->no_cacheable = 0;
@@ -251,15 +251,15 @@ static ngx_int_t ngx_nsoc_upstream_bytes_variable(
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nsoc_upstream_response_time_variable(
-        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
+static ngx_int_t ngx_nlnk_upstream_response_time_variable(
+        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
         uintptr_t data)
 {
     u_char *p;
     size_t len;
     ngx_uint_t i;
     ngx_msec_int_t ms;
-    ngx_nsoc_upstream_state_t *state;
+    ngx_nlnk_upstream_state_t *state;
 
     v->valid = 1;
     v->no_cacheable = 0;
@@ -318,7 +318,7 @@ static ngx_int_t ngx_nsoc_upstream_response_time_variable(
 }
 
 static char *
-ngx_nsoc_upstream(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
+ngx_nlnk_upstream(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
 {
     char *rv;
     void *mconf;
@@ -326,9 +326,9 @@ ngx_nsoc_upstream(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     ngx_url_t u;
     ngx_uint_t m;
     ngx_conf_t pcf;
-    ngx_nsoc_module_t *module;
-    ngx_nsoc_conf_ctx_t *ctx, *stream_ctx;
-    ngx_nsoc_upstream_srv_conf_t *uscf;
+    ngx_nlnk_module_t *module;
+    ngx_nlnk_conf_ctx_t *ctx, *stream_ctx;
+    ngx_nlnk_upstream_srv_conf_t *uscf;
 
     ngx_memzero(&u, sizeof(ngx_url_t));
 
@@ -337,19 +337,19 @@ ngx_nsoc_upstream(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     u.no_resolve = 1;
     u.no_port = 1;
 
-    uscf = ngx_nsoc_upstream_add(
+    uscf = ngx_nlnk_upstream_add(
             cf,
             &u,
-            NGX_NSOC_UPSTREAM_CREATE | NGX_NSOC_UPSTREAM_WEIGHT
-                    | NGX_NSOC_UPSTREAM_MAX_CONNS
-                    | NGX_NSOC_UPSTREAM_MAX_FAILS
-                    | NGX_NSOC_UPSTREAM_FAIL_TIMEOUT | NGX_NSOC_UPSTREAM_DOWN
-                    | NGX_NSOC_UPSTREAM_BACKUP);
+            NGX_NLNK_UPSTREAM_CREATE | NGX_NLNK_UPSTREAM_WEIGHT
+                    | NGX_NLNK_UPSTREAM_MAX_CONNS
+                    | NGX_NLNK_UPSTREAM_MAX_FAILS
+                    | NGX_NLNK_UPSTREAM_FAIL_TIMEOUT | NGX_NLNK_UPSTREAM_DOWN
+                    | NGX_NLNK_UPSTREAM_BACKUP);
     if (uscf == NULL) {
         return NGX_CONF_ERROR ;
     }
 
-    ctx = ngx_pcalloc(cf->pool, sizeof(ngx_nsoc_conf_ctx_t));
+    ctx = ngx_pcalloc(cf->pool, sizeof(ngx_nlnk_conf_ctx_t));
     if (ctx == NULL) {
         return NGX_CONF_ERROR ;
     }
@@ -360,17 +360,17 @@ ngx_nsoc_upstream(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     /* the upstream{}'s srv_conf */
 
     ctx->srv_conf = ngx_pcalloc(
-            cf->pool, sizeof(void *) * ngx_nsoc_max_module);
+            cf->pool, sizeof(void *) * ngx_nlnk_max_module);
     if (ctx->srv_conf == NULL) {
         return NGX_CONF_ERROR ;
     }
 
-    ctx->srv_conf[ngx_nsoc_upstream_module.ctx_index] = uscf;
+    ctx->srv_conf[ngx_nlnk_upstream_module.ctx_index] = uscf;
 
     uscf->srv_conf = ctx->srv_conf;
 
     for (m = 0; cf->cycle->modules[m]; m++) {
-        if (cf->cycle->modules[m]->type != NGX_NSOC_MODULE) {
+        if (cf->cycle->modules[m]->type != NGX_NLNK_MODULE) {
             continue;
         }
 
@@ -387,7 +387,7 @@ ngx_nsoc_upstream(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     }
 
     uscf->servers = ngx_array_create(
-            cf->pool, 4, sizeof(ngx_nsoc_upstream_server_t));
+            cf->pool, 4, sizeof(ngx_nlnk_upstream_server_t));
     if (uscf->servers == NULL) {
         return NGX_CONF_ERROR ;
     }
@@ -396,7 +396,7 @@ ngx_nsoc_upstream(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
 
     pcf = *cf;
     cf->ctx = ctx;
-    cf->cmd_type = NGX_NSOC_UPS_CONF;
+    cf->cmd_type = NGX_NLNK_UPS_CONF;
 
     rv = ngx_conf_parse(cf, NULL);
 
@@ -416,23 +416,23 @@ ngx_nsoc_upstream(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
 }
 
 static char *
-ngx_nsoc_upstream_server(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ngx_nlnk_upstream_server(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    ngx_nsoc_upstream_srv_conf_t *uscf = conf;
+    ngx_nlnk_upstream_srv_conf_t *uscf = conf;
 
     time_t fail_timeout;
     ngx_str_t *value, s;
     ngx_url_t u;
     ngx_int_t weight, max_conns, max_fails;
     ngx_uint_t i;
-    ngx_nsoc_upstream_server_t *us;
+    ngx_nlnk_upstream_server_t *us;
 
     us = ngx_array_push(uscf->servers);
     if (us == NULL) {
         return NGX_CONF_ERROR ;
     }
 
-    ngx_memzero(us, sizeof(ngx_nsoc_upstream_server_t));
+    ngx_memzero(us, sizeof(ngx_nlnk_upstream_server_t));
 
     value = cf->args->elts;
 
@@ -445,7 +445,7 @@ ngx_nsoc_upstream_server(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
         if (ngx_strncmp(value[i].data, "weight=", 7) == 0) {
 
-            if (!(uscf->flags & NGX_NSOC_UPSTREAM_WEIGHT)) {
+            if (!(uscf->flags & NGX_NLNK_UPSTREAM_WEIGHT)) {
                 goto not_supported;
             }
 
@@ -460,7 +460,7 @@ ngx_nsoc_upstream_server(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
         if (ngx_strncmp(value[i].data, "max_conns=", 10) == 0) {
 
-            if (!(uscf->flags & NGX_NSOC_UPSTREAM_MAX_CONNS)) {
+            if (!(uscf->flags & NGX_NLNK_UPSTREAM_MAX_CONNS)) {
                 goto not_supported;
             }
 
@@ -475,7 +475,7 @@ ngx_nsoc_upstream_server(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
         if (ngx_strncmp(value[i].data, "max_fails=", 10) == 0) {
 
-            if (!(uscf->flags & NGX_NSOC_UPSTREAM_MAX_FAILS)) {
+            if (!(uscf->flags & NGX_NLNK_UPSTREAM_MAX_FAILS)) {
                 goto not_supported;
             }
 
@@ -490,7 +490,7 @@ ngx_nsoc_upstream_server(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
         if (ngx_strncmp(value[i].data, "fail_timeout=", 13) == 0) {
 
-            if (!(uscf->flags & NGX_NSOC_UPSTREAM_FAIL_TIMEOUT)) {
+            if (!(uscf->flags & NGX_NLNK_UPSTREAM_FAIL_TIMEOUT)) {
                 goto not_supported;
             }
 
@@ -508,7 +508,7 @@ ngx_nsoc_upstream_server(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
         if (ngx_strcmp(value[i].data, "backup") == 0) {
 
-            if (!(uscf->flags & NGX_NSOC_UPSTREAM_BACKUP)) {
+            if (!(uscf->flags & NGX_NLNK_UPSTREAM_BACKUP)) {
                 goto not_supported;
             }
 
@@ -519,7 +519,7 @@ ngx_nsoc_upstream_server(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
         if (ngx_strcmp(value[i].data, "down") == 0) {
 
-            if (!(uscf->flags & NGX_NSOC_UPSTREAM_DOWN)) {
+            if (!(uscf->flags & NGX_NLNK_UPSTREAM_DOWN)) {
                 goto not_supported;
             }
 
@@ -577,15 +577,15 @@ ngx_nsoc_upstream_server(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     return NGX_CONF_ERROR ;
 }
 
-ngx_nsoc_upstream_srv_conf_t *
-ngx_nsoc_upstream_add(ngx_conf_t *cf, ngx_url_t *u, ngx_uint_t flags)
+ngx_nlnk_upstream_srv_conf_t *
+ngx_nlnk_upstream_add(ngx_conf_t *cf, ngx_url_t *u, ngx_uint_t flags)
 {
     ngx_uint_t i;
-    ngx_nsoc_upstream_server_t *us;
-    ngx_nsoc_upstream_srv_conf_t *uscf, **uscfp;
-    ngx_nsoc_upstream_main_conf_t *umcf;
+    ngx_nlnk_upstream_server_t *us;
+    ngx_nlnk_upstream_srv_conf_t *uscf, **uscfp;
+    ngx_nlnk_upstream_main_conf_t *umcf;
 
-    if (!(flags & NGX_NSOC_UPSTREAM_CREATE)) {
+    if (!(flags & NGX_NLNK_UPSTREAM_CREATE)) {
 
         if (ngx_parse_url(cf->pool, u) != NGX_OK) {
             if (u->err) {
@@ -598,8 +598,8 @@ ngx_nsoc_upstream_add(ngx_conf_t *cf, ngx_url_t *u, ngx_uint_t flags)
         }
     }
 
-    umcf = ngx_nsoc_conf_get_module_main_conf(
-            cf, ngx_nsoc_upstream_module);
+    umcf = ngx_nlnk_conf_get_module_main_conf(
+            cf, ngx_nlnk_upstream_module);
 
     uscfp = umcf->upstreams.elts;
 
@@ -611,22 +611,22 @@ ngx_nsoc_upstream_add(ngx_conf_t *cf, ngx_url_t *u, ngx_uint_t flags)
             continue;
         }
 
-        if ((flags & NGX_NSOC_UPSTREAM_CREATE)
-                && (uscfp[i]->flags & NGX_NSOC_UPSTREAM_CREATE)) {
+        if ((flags & NGX_NLNK_UPSTREAM_CREATE)
+                && (uscfp[i]->flags & NGX_NLNK_UPSTREAM_CREATE)) {
             ngx_conf_log_error(
                     NGX_LOG_EMERG, cf, 0, "duplicate upstream \"%V\"",
                     &u->host);
             return NULL;
         }
 
-        if ((uscfp[i]->flags & NGX_NSOC_UPSTREAM_CREATE) && !u->no_port) {
+        if ((uscfp[i]->flags & NGX_NLNK_UPSTREAM_CREATE) && !u->no_port) {
             ngx_conf_log_error(
                     NGX_LOG_EMERG, cf, 0,
                     "upstream \"%V\" may not have port %d", &u->host, u->port);
             return NULL;
         }
 
-        if ((flags & NGX_NSOC_UPSTREAM_CREATE) && !uscfp[i]->no_port) {
+        if ((flags & NGX_NLNK_UPSTREAM_CREATE) && !uscfp[i]->no_port) {
             ngx_log_error(
                     NGX_LOG_EMERG, cf->log, 0,
                     "upstream \"%V\" may not have port %d in %s:%ui", &u->host,
@@ -638,14 +638,14 @@ ngx_nsoc_upstream_add(ngx_conf_t *cf, ngx_url_t *u, ngx_uint_t flags)
             continue;
         }
 
-        if (flags & NGX_NSOC_UPSTREAM_CREATE) {
+        if (flags & NGX_NLNK_UPSTREAM_CREATE) {
             uscfp[i]->flags = flags;
         }
 
         return uscfp[i];
     }
 
-    uscf = ngx_pcalloc(cf->pool, sizeof(ngx_nsoc_upstream_srv_conf_t));
+    uscf = ngx_pcalloc(cf->pool, sizeof(ngx_nlnk_upstream_srv_conf_t));
     if (uscf == NULL) {
         return NULL;
     }
@@ -659,7 +659,7 @@ ngx_nsoc_upstream_add(ngx_conf_t *cf, ngx_url_t *u, ngx_uint_t flags)
 
     if (u->naddrs == 1 && (u->port || u->family == AF_UNIX)) {
         uscf->servers = ngx_array_create(
-                cf->pool, 1, sizeof(ngx_nsoc_upstream_server_t));
+                cf->pool, 1, sizeof(ngx_nlnk_upstream_server_t));
         if (uscf->servers == NULL) {
             return NULL;
         }
@@ -669,7 +669,7 @@ ngx_nsoc_upstream_add(ngx_conf_t *cf, ngx_url_t *u, ngx_uint_t flags)
             return NULL;
         }
 
-        ngx_memzero(us, sizeof(ngx_nsoc_upstream_server_t));
+        ngx_memzero(us, sizeof(ngx_nlnk_upstream_server_t));
 
         us->addrs = u->addrs;
         us->naddrs = 1;
@@ -686,18 +686,18 @@ ngx_nsoc_upstream_add(ngx_conf_t *cf, ngx_url_t *u, ngx_uint_t flags)
 }
 
 static void *
-ngx_nsoc_upstream_create_main_conf(ngx_conf_t *cf)
+ngx_nlnk_upstream_create_main_conf(ngx_conf_t *cf)
 {
-    ngx_nsoc_upstream_main_conf_t *umcf;
+    ngx_nlnk_upstream_main_conf_t *umcf;
 
-    umcf = ngx_pcalloc(cf->pool, sizeof(ngx_nsoc_upstream_main_conf_t));
+    umcf = ngx_pcalloc(cf->pool, sizeof(ngx_nlnk_upstream_main_conf_t));
     if (umcf == NULL) {
         return NULL;
     }
 
     if (ngx_array_init(
             &umcf->upstreams, cf->pool, 4,
-            sizeof(ngx_nsoc_upstream_srv_conf_t *)) != NGX_OK) {
+            sizeof(ngx_nlnk_upstream_srv_conf_t *)) != NGX_OK) {
         return NULL;
     }
 
@@ -705,13 +705,13 @@ ngx_nsoc_upstream_create_main_conf(ngx_conf_t *cf)
 }
 
 static char *
-ngx_nsoc_upstream_init_main_conf(ngx_conf_t *cf, void *conf)
+ngx_nlnk_upstream_init_main_conf(ngx_conf_t *cf, void *conf)
 {
-    ngx_nsoc_upstream_main_conf_t *umcf = conf;
+    ngx_nlnk_upstream_main_conf_t *umcf = conf;
 
     ngx_uint_t i;
-    ngx_nsoc_upstream_init_pt init;
-    ngx_nsoc_upstream_srv_conf_t **uscfp;
+    ngx_nlnk_upstream_init_pt init;
+    ngx_nlnk_upstream_srv_conf_t **uscfp;
 
     uscfp = umcf->upstreams.elts;
 
@@ -719,7 +719,7 @@ ngx_nsoc_upstream_init_main_conf(ngx_conf_t *cf, void *conf)
 
         init = uscfp[i]->peer.init_upstream ?
                 uscfp[i]->peer.init_upstream :
-                ngx_nsoc_upstream_init_round_robin;
+                ngx_nlnk_upstream_init_round_robin;
 
         if (init(cf, uscfp[i]) != NGX_OK) {
             return NGX_CONF_ERROR ;

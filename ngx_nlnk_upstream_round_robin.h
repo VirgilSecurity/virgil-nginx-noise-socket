@@ -3,16 +3,16 @@
  * Copyright (C) Nginx, Inc.
  */
 
-#ifndef _NGX_NSOC_UPNOISE_ROUND_ROBIN_H_INCLUDED_
-#define _NGX_NSOC_UPNOISE_ROUND_ROBIN_H_INCLUDED_
+#ifndef _NGX_NLNK_UPSTREAM_ROUND_ROBIN_H_INCLUDED_
+#define _NGX_NLNK_UPSTREAM_ROUND_ROBIN_H_INCLUDED_
 
 #include <ngx_config.h>
 #include <ngx_core.h>
-#include "ngx_nsoc.h"
+#include "ngx_nlnk.h"
 
-typedef struct ngx_nsoc_upstream_rr_peer_s ngx_nsoc_upstream_rr_peer_t;
+typedef struct ngx_nlnk_upstream_rr_peer_s ngx_nlnk_upstream_rr_peer_t;
 
-struct ngx_nsoc_upstream_rr_peer_s {
+struct ngx_nlnk_upstream_rr_peer_s {
         struct sockaddr *sockaddr;
         socklen_t socklen;
         ngx_str_t name;
@@ -39,25 +39,25 @@ struct ngx_nsoc_upstream_rr_peer_s {
         void *ssl_session;
         int ssl_session_len;
 
-#if (NGX_NSOC_UPSTREAM_ZONE)
+#if (NGX_NLNK_UPSTREAM_ZONE)
         ngx_atomic_t lock;
 #endif
 
-        ngx_nsoc_upstream_rr_peer_t *next;
+        ngx_nlnk_upstream_rr_peer_t *next;
 
 NGX_COMPAT_BEGIN(25)
 NGX_COMPAT_END
 };
 
-typedef struct ngx_nsoc_upstream_rr_peers_s ngx_nsoc_upstream_rr_peers_t;
+typedef struct ngx_nlnk_upstream_rr_peers_s ngx_nlnk_upstream_rr_peers_t;
 
-struct ngx_nsoc_upstream_rr_peers_s {
+struct ngx_nlnk_upstream_rr_peers_s {
     ngx_uint_t number;
 
-#if (NGX_NSOC_UPSTREAM_ZONE)
+#if (NGX_NLNK_UPSTREAM_ZONE)
     ngx_slab_pool_t *shpool;
     ngx_atomic_t rwlock;
-    ngx_nsoc_upstream_rr_peers_t *zone_next;
+    ngx_nlnk_upstream_rr_peers_t *zone_next;
 #endif
 
     ngx_uint_t total_weight;
@@ -67,38 +67,38 @@ struct ngx_nsoc_upstream_rr_peers_s {
 
     ngx_str_t *name;
 
-    ngx_nsoc_upstream_rr_peers_t *next;
+    ngx_nlnk_upstream_rr_peers_t *next;
 
-    ngx_nsoc_upstream_rr_peer_t *peer;
+    ngx_nlnk_upstream_rr_peer_t *peer;
 };
 
-#if (NGX_NSOC_UPSTREAM_ZONE)
+#if (NGX_NLNK_UPSTREAM_ZONE)
 
-#define ngx_nsoc_upstream_rr_peers_rlock(peers)                             \
+#define ngx_nlnk_upstream_rr_peers_rlock(peers)                             \
                                                                               \
     if (peers->shpool) {                                                      \
         ngx_rwlock_rlock(&peers->rwlock);                                     \
     }
 
-#define ngx_nsoc_upstream_rr_peers_wlock(peers)                             \
+#define ngx_nlnk_upstream_rr_peers_wlock(peers)                             \
                                                                               \
     if (peers->shpool) {                                                      \
         ngx_rwlock_wlock(&peers->rwlock);                                     \
     }
 
-#define ngx_nsoc_upstream_rr_peers_unlock(peers)                            \
+#define ngx_nlnk_upstream_rr_peers_unlock(peers)                            \
                                                                               \
     if (peers->shpool) {                                                      \
         ngx_rwlock_unlock(&peers->rwlock);                                    \
     }
 
-#define ngx_nsoc_upstream_rr_peer_lock(peers, peer)                         \
+#define ngx_nlnk_upstream_rr_peer_lock(peers, peer)                         \
                                                                               \
     if (peers->shpool) {                                                      \
         ngx_rwlock_wlock(&peer->lock);                                        \
     }
 
-#define ngx_nsoc_upstream_rr_peer_unlock(peers, peer)                       \
+#define ngx_nlnk_upstream_rr_peer_unlock(peers, peer)                       \
                                                                               \
     if (peers->shpool) {                                                      \
         ngx_rwlock_unlock(&peer->lock);                                       \
@@ -106,31 +106,31 @@ struct ngx_nsoc_upstream_rr_peers_s {
 
 #else
 
-#define ngx_nsoc_upstream_rr_peers_rlock(peers)
-#define ngx_nsoc_upstream_rr_peers_wlock(peers)
-#define ngx_nsoc_upstream_rr_peers_unlock(peers)
-#define ngx_nsoc_upstream_rr_peer_lock(peers, peer)
-#define ngx_nsoc_upstream_rr_peer_unlock(peers, peer)
+#define ngx_nlnk_upstream_rr_peers_rlock(peers)
+#define ngx_nlnk_upstream_rr_peers_wlock(peers)
+#define ngx_nlnk_upstream_rr_peers_unlock(peers)
+#define ngx_nlnk_upstream_rr_peer_lock(peers, peer)
+#define ngx_nlnk_upstream_rr_peer_unlock(peers, peer)
 
 #endif
 
 typedef struct {
     ngx_uint_t config;
-    ngx_nsoc_upstream_rr_peers_t *peers;
-    ngx_nsoc_upstream_rr_peer_t *current;
+    ngx_nlnk_upstream_rr_peers_t *peers;
+    ngx_nlnk_upstream_rr_peer_t *current;
     uintptr_t *tried;
     uintptr_t data;
-} ngx_nsoc_upstream_rr_peer_data_t;
+} ngx_nlnk_upstream_rr_peer_data_t;
 
-ngx_int_t ngx_nsoc_upstream_init_round_robin(ngx_conf_t *cf,
-    ngx_nsoc_upstream_srv_conf_t *us);
-ngx_int_t ngx_nsoc_upstream_init_round_robin_peer(
-    ngx_nsoc_session_t *s, ngx_nsoc_upstream_srv_conf_t *us);
-ngx_int_t ngx_nsoc_upstream_create_round_robin_peer(
-    ngx_nsoc_session_t *s, ngx_nsoc_upstream_resolved_t *ur);
-ngx_int_t ngx_nsoc_upstream_get_round_robin_peer(
+ngx_int_t ngx_nlnk_upstream_init_round_robin(ngx_conf_t *cf,
+    ngx_nlnk_upstream_srv_conf_t *us);
+ngx_int_t ngx_nlnk_upstream_init_round_robin_peer(
+    ngx_nlnk_session_t *s, ngx_nlnk_upstream_srv_conf_t *us);
+ngx_int_t ngx_nlnk_upstream_create_round_robin_peer(
+    ngx_nlnk_session_t *s, ngx_nlnk_upstream_resolved_t *ur);
+ngx_int_t ngx_nlnk_upstream_get_round_robin_peer(
     ngx_peer_connection_t *pc, void *data);
-void ngx_nsoc_upstream_free_round_robin_peer(ngx_peer_connection_t *pc,
+void ngx_nlnk_upstream_free_round_robin_peer(ngx_peer_connection_t *pc,
     void *data, ngx_uint_t state);
 
-#endif /* _NGX_NSOC_UPNOISE_ROUND_ROBIN_H_INCLUDED_ */
+#endif /* _NGX_NLNK_UPSTREAM_ROUND_ROBIN_H_INCLUDED_ */

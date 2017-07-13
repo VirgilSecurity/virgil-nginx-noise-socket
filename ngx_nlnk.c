@@ -3,41 +3,41 @@
  * Copyright (C) Nginx, Inc.
  */
 
-#include "ngx_nsoc.h"
+#include "ngx_nlnk.h"
 
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_event.h>
 
-static char *ngx_nsoc_block(ngx_conf_t *cf, ngx_command_t *cmd,
+static char *ngx_nlnk_block(ngx_conf_t *cf, ngx_command_t *cmd,
         void *conf);
-static ngx_int_t ngx_nsoc_init_phases(ngx_conf_t *cf,
-        ngx_nsoc_core_main_conf_t *cmcf);
-static ngx_int_t ngx_nsoc_init_phase_handlers(ngx_conf_t *cf,
-        ngx_nsoc_core_main_conf_t *cmcf);
-static ngx_int_t ngx_nsoc_add_ports(ngx_conf_t *cf, ngx_array_t *ports,
-        ngx_nsoc_listen_t *listen);
-static char *ngx_nsoc_optimize_servers(ngx_conf_t *cf,
+static ngx_int_t ngx_nlnk_init_phases(ngx_conf_t *cf,
+        ngx_nlnk_core_main_conf_t *cmcf);
+static ngx_int_t ngx_nlnk_init_phase_handlers(ngx_conf_t *cf,
+        ngx_nlnk_core_main_conf_t *cmcf);
+static ngx_int_t ngx_nlnk_add_ports(ngx_conf_t *cf, ngx_array_t *ports,
+        ngx_nlnk_listen_t *listen);
+static char *ngx_nlnk_optimize_servers(ngx_conf_t *cf,
         ngx_array_t *ports);
-static ngx_int_t ngx_nsoc_add_addrs(ngx_conf_t *cf,
-        ngx_nsoc_port_t *stport, ngx_nsoc_conf_addr_t *addr);
+static ngx_int_t ngx_nlnk_add_addrs(ngx_conf_t *cf,
+        ngx_nlnk_port_t *stport, ngx_nlnk_conf_addr_t *addr);
 #if (NGX_HAVE_INET6)
-static ngx_int_t ngx_nsoc_add_addrs6(ngx_conf_t *cf,
-        ngx_nsoc_port_t *stport, ngx_nsoc_conf_addr_t *addr);
+static ngx_int_t ngx_nlnk_add_addrs6(ngx_conf_t *cf,
+        ngx_nlnk_port_t *stport, ngx_nlnk_conf_addr_t *addr);
 #endif
-static ngx_int_t ngx_nsoc_cmp_conf_addrs(const void *one,
+static ngx_int_t ngx_nlnk_cmp_conf_addrs(const void *one,
         const void *two);
 
-ngx_uint_t ngx_nsoc_max_module;
+ngx_uint_t ngx_nlnk_max_module;
 
-ngx_nsoc_filter_pt ngx_nsoc_top_filter;
+ngx_nlnk_filter_pt ngx_nlnk_top_filter;
 
-static ngx_command_t ngx_nsoc_commands[] =
+static ngx_command_t ngx_nlnk_commands[] =
 {
 
-  { ngx_string("noise_socket"),
+  { ngx_string("noise_link"),
     NGX_MAIN_CONF | NGX_CONF_BLOCK | NGX_CONF_NOARGS,
-    ngx_nsoc_block,
+    ngx_nlnk_block,
     0,
     0,
     NULL },
@@ -45,17 +45,17 @@ static ngx_command_t ngx_nsoc_commands[] =
   ngx_null_command
 };
 
-static ngx_core_module_t ngx_nsoc_module_ctx =
+static ngx_core_module_t ngx_nlnk_module_ctx =
 {
-  ngx_string("noisesocket"),
+  ngx_string("noiselink"),
   NULL,
   NULL };
 
-ngx_module_t ngx_nsoc_module =
+ngx_module_t ngx_nlnk_module =
 {
   NGX_MODULE_V1,
-  &ngx_nsoc_module_ctx, /* module context */
-  ngx_nsoc_commands, /* module directives */
+  &ngx_nlnk_module_ctx, /* module context */
+  ngx_nlnk_commands, /* module directives */
   NGX_CORE_MODULE, /* module type */
   NULL, /* init master */
   NULL, /* init module */
@@ -68,39 +68,39 @@ ngx_module_t ngx_nsoc_module =
 };
 
 static char *
-ngx_nsoc_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ngx_nlnk_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     char *rv;
     ngx_uint_t i, m, mi, s;
     ngx_conf_t pcf;
     ngx_array_t ports;
-    ngx_nsoc_listen_t *listen;
-    ngx_nsoc_module_t *module;
-    ngx_nsoc_conf_ctx_t *ctx;
-    ngx_nsoc_core_srv_conf_t **cscfp;
-    ngx_nsoc_core_main_conf_t *cmcf;
+    ngx_nlnk_listen_t *listen;
+    ngx_nlnk_module_t *module;
+    ngx_nlnk_conf_ctx_t *ctx;
+    ngx_nlnk_core_srv_conf_t **cscfp;
+    ngx_nlnk_core_main_conf_t *cmcf;
 
-    if (*(ngx_nsoc_conf_ctx_t **) conf) {
+    if (*(ngx_nlnk_conf_ctx_t **) conf) {
         return "is duplicate";
     }
 
     /* the main noisesocket context */
 
-    ctx = ngx_pcalloc(cf->pool, sizeof(ngx_nsoc_conf_ctx_t));
+    ctx = ngx_pcalloc(cf->pool, sizeof(ngx_nlnk_conf_ctx_t));
     if (ctx == NULL) {
         return NGX_CONF_ERROR ;
     }
 
-    *(ngx_nsoc_conf_ctx_t **) conf = ctx;
+    *(ngx_nlnk_conf_ctx_t **) conf = ctx;
 
     /* count the number of the noisesocket modules and set up their indices */
 
-    ngx_nsoc_max_module = ngx_count_modules(cf->cycle, NGX_NSOC_MODULE);
+    ngx_nlnk_max_module = ngx_count_modules(cf->cycle, NGX_NLNK_MODULE);
 
     /* the noisesocket main_conf context, it's the same in the all noisesocket contexts */
 
     ctx->main_conf = ngx_pcalloc(
-            cf->pool, sizeof(void *) * ngx_nsoc_max_module);
+            cf->pool, sizeof(void *) * ngx_nlnk_max_module);
     if (ctx->main_conf == NULL) {
         return NGX_CONF_ERROR ;
     }
@@ -111,7 +111,7 @@ ngx_nsoc_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
      */
 
     ctx->srv_conf = ngx_pcalloc(
-            cf->pool, sizeof(void *) * ngx_nsoc_max_module);
+            cf->pool, sizeof(void *) * ngx_nlnk_max_module);
     if (ctx->srv_conf == NULL) {
         return NGX_CONF_ERROR ;
     }
@@ -121,7 +121,7 @@ ngx_nsoc_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
      */
 
     for (m = 0; cf->cycle->modules[m]; m++) {
-        if (cf->cycle->modules[m]->type != NGX_NSOC_MODULE) {
+        if (cf->cycle->modules[m]->type != NGX_NLNK_MODULE) {
             continue;
         }
 
@@ -147,7 +147,7 @@ ngx_nsoc_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     cf->ctx = ctx;
 
     for (m = 0; cf->cycle->modules[m]; m++) {
-        if (cf->cycle->modules[m]->type != NGX_NSOC_MODULE) {
+        if (cf->cycle->modules[m]->type != NGX_NLNK_MODULE) {
             continue;
         }
 
@@ -162,8 +162,8 @@ ngx_nsoc_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     /* parse inside the noisesocket{} block */
 
-    cf->module_type = NGX_NSOC_MODULE;
-    cf->cmd_type = NGX_NSOC_MAIN_CONF;
+    cf->module_type = NGX_NLNK_MODULE;
+    cf->cmd_type = NGX_NLNK_MAIN_CONF;
     rv = ngx_conf_parse(cf, NULL);
 
     if (rv != NGX_CONF_OK) {
@@ -173,11 +173,11 @@ ngx_nsoc_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     /* init noisesocket{} main_conf's, merge the server{}s' srv_conf's */
 
-    cmcf = ctx->main_conf[ngx_nsoc_core_module.ctx_index];
+    cmcf = ctx->main_conf[ngx_nlnk_core_module.ctx_index];
     cscfp = cmcf->servers.elts;
 
     for (m = 0; cf->cycle->modules[m]; m++) {
-        if (cf->cycle->modules[m]->type != NGX_NSOC_MODULE) {
+        if (cf->cycle->modules[m]->type != NGX_NLNK_MODULE) {
             continue;
         }
 
@@ -213,12 +213,12 @@ ngx_nsoc_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         }
     }
 
-    if (ngx_nsoc_init_phases(cf, cmcf) != NGX_OK) {
+    if (ngx_nlnk_init_phases(cf, cmcf) != NGX_OK) {
         return NGX_CONF_ERROR ;
     }
 
     for (m = 0; cf->cycle->modules[m]; m++) {
-        if (cf->cycle->modules[m]->type != NGX_NSOC_MODULE) {
+        if (cf->cycle->modules[m]->type != NGX_NLNK_MODULE) {
             continue;
         }
 
@@ -231,93 +231,93 @@ ngx_nsoc_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         }
     }
 
-    if (ngx_nsoc_variables_init_vars(cf) != NGX_OK) {
+    if (ngx_nlnk_variables_init_vars(cf) != NGX_OK) {
         return NGX_CONF_ERROR ;
     }
 
     *cf = pcf;
 
-    if (ngx_nsoc_init_phase_handlers(cf, cmcf) != NGX_OK) {
+    if (ngx_nlnk_init_phase_handlers(cf, cmcf) != NGX_OK) {
         return NGX_CONF_ERROR ;
     }
 
     if (ngx_array_init(
             &ports, cf->temp_pool, 4,
-            sizeof(ngx_nsoc_conf_port_t)) != NGX_OK) {
+            sizeof(ngx_nlnk_conf_port_t)) != NGX_OK) {
         return NGX_CONF_ERROR ;
     }
 
     listen = cmcf->listen.elts;
 
     for (i = 0; i < cmcf->listen.nelts; i++) {
-        if (ngx_nsoc_add_ports(cf, &ports, &listen[i]) != NGX_OK) {
+        if (ngx_nlnk_add_ports(cf, &ports, &listen[i]) != NGX_OK) {
             return NGX_CONF_ERROR ;
         }
     }
 
-    return ngx_nsoc_optimize_servers(cf, &ports);
+    return ngx_nlnk_optimize_servers(cf, &ports);
 }
 
-static ngx_int_t ngx_nsoc_init_phases(ngx_conf_t *cf,
-        ngx_nsoc_core_main_conf_t *cmcf)
+static ngx_int_t ngx_nlnk_init_phases(ngx_conf_t *cf,
+        ngx_nlnk_core_main_conf_t *cmcf)
 {
     if (ngx_array_init(
-            &cmcf->phases[NGX_NSOC_POST_ACCEPT_PHASE].handlers, cf->pool, 1,
-            sizeof(ngx_nsoc_handler_pt)) != NGX_OK) {
+            &cmcf->phases[NGX_NLNK_POST_ACCEPT_PHASE].handlers, cf->pool, 1,
+            sizeof(ngx_nlnk_handler_pt)) != NGX_OK) {
         return NGX_ERROR;
     }
 
     if (ngx_array_init(
-            &cmcf->phases[NGX_NSOC_PREACCESS_PHASE].handlers, cf->pool, 1,
-            sizeof(ngx_nsoc_handler_pt)) != NGX_OK) {
+            &cmcf->phases[NGX_NLNK_PREACCESS_PHASE].handlers, cf->pool, 1,
+            sizeof(ngx_nlnk_handler_pt)) != NGX_OK) {
         return NGX_ERROR;
     }
 
     if (ngx_array_init(
-            &cmcf->phases[NGX_NSOC_ACCESS_PHASE].handlers, cf->pool, 1,
-            sizeof(ngx_nsoc_handler_pt)) != NGX_OK) {
+            &cmcf->phases[NGX_NLNK_ACCESS_PHASE].handlers, cf->pool, 1,
+            sizeof(ngx_nlnk_handler_pt)) != NGX_OK) {
         return NGX_ERROR;
     }
 
     if (ngx_array_init(
-            &cmcf->phases[NGX_NSOC_PROTECT_PHASE].handlers, cf->pool, 1,
-            sizeof(ngx_nsoc_handler_pt)) != NGX_OK) {
+            &cmcf->phases[NGX_NLNK_PROTECT_PHASE].handlers, cf->pool, 1,
+            sizeof(ngx_nlnk_handler_pt)) != NGX_OK) {
         return NGX_ERROR;
     }
 
     if (ngx_array_init(
-            &cmcf->phases[NGX_NSOC_PREREAD_PHASE].handlers, cf->pool, 1,
-            sizeof(ngx_nsoc_handler_pt)) != NGX_OK) {
+            &cmcf->phases[NGX_NLNK_PREREAD_PHASE].handlers, cf->pool, 1,
+            sizeof(ngx_nlnk_handler_pt)) != NGX_OK) {
         return NGX_ERROR;
     }
 
     if (ngx_array_init(
-            &cmcf->phases[NGX_NSOC_LOG_PHASE].handlers, cf->pool, 1,
-            sizeof(ngx_nsoc_handler_pt)) != NGX_OK) {
+            &cmcf->phases[NGX_NLNK_LOG_PHASE].handlers, cf->pool, 1,
+            sizeof(ngx_nlnk_handler_pt)) != NGX_OK) {
         return NGX_ERROR;
     }
 
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nsoc_init_phase_handlers(ngx_conf_t *cf,
-        ngx_nsoc_core_main_conf_t *cmcf)
+static ngx_int_t ngx_nlnk_init_phase_handlers(ngx_conf_t *cf,
+        ngx_nlnk_core_main_conf_t *cmcf)
 {
     ngx_int_t j;
     ngx_uint_t i, n;
-    ngx_nsoc_handler_pt *h;
-    ngx_nsoc_phase_handler_t *ph;
-    ngx_nsoc_phase_handler_pt checker;
+    ngx_nlnk_handler_pt *h;
+    ngx_nlnk_phase_handler_t *ph;
+    ngx_nlnk_phase_handler_pt checker;
 
     n = 1 /* content phase */;
 
-    for (i = 0; i < NGX_NSOC_LOG_PHASE; i++) {
+    for (i = 0; i < NGX_NLNK_LOG_PHASE; i++) {
         n += cmcf->phases[i].handlers.nelts;
     }
 
     ph = ngx_pcalloc(
             cf->pool,
-            n * sizeof(ngx_nsoc_phase_handler_t) + sizeof(void *));
+            n * sizeof(ngx_nlnk_phase_handler_t) + sizeof(void *));
     if (ph == NULL) {
         return NGX_ERROR;
     }
@@ -325,24 +325,24 @@ static ngx_int_t ngx_nsoc_init_phase_handlers(ngx_conf_t *cf,
     cmcf->phase_engine.handlers = ph;
     n = 0;
 
-    for (i = 0; i < NGX_NSOC_LOG_PHASE; i++) {
+    for (i = 0; i < NGX_NLNK_LOG_PHASE; i++) {
         h = cmcf->phases[i].handlers.elts;
 
         switch (i) {
 
-        case NGX_NSOC_PREREAD_PHASE:
-            checker = ngx_nsoc_core_preread_phase;
+        case NGX_NLNK_PREREAD_PHASE:
+            checker = ngx_nlnk_core_preread_phase;
         break;
 
-        case NGX_NSOC_CONTENT_PHASE:
-            ph->checker = ngx_nsoc_core_content_phase;
+        case NGX_NLNK_CONTENT_PHASE:
+            ph->checker = ngx_nlnk_core_content_phase;
             n++;
             ph++;
 
             continue;
 
         default:
-            checker = ngx_nsoc_core_generic_phase;
+            checker = ngx_nlnk_core_generic_phase;
         }
 
         n += cmcf->phases[i].handlers.nelts;
@@ -358,14 +358,14 @@ static ngx_int_t ngx_nsoc_init_phase_handlers(ngx_conf_t *cf,
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nsoc_add_ports(ngx_conf_t *cf, ngx_array_t *ports,
-        ngx_nsoc_listen_t *listen)
+static ngx_int_t ngx_nlnk_add_ports(ngx_conf_t *cf, ngx_array_t *ports,
+        ngx_nlnk_listen_t *listen)
 {
     in_port_t p;
     ngx_uint_t i;
     struct sockaddr *sa;
-    ngx_nsoc_conf_port_t *port;
-    ngx_nsoc_conf_addr_t *addr;
+    ngx_nlnk_conf_port_t *port;
+    ngx_nlnk_conf_addr_t *addr;
 
     sa = &listen->sockaddr.sockaddr;
     p = ngx_inet_get_port(sa);
@@ -395,7 +395,7 @@ static ngx_int_t ngx_nsoc_add_ports(ngx_conf_t *cf, ngx_array_t *ports,
 
     if (ngx_array_init(
             &port->addrs, cf->temp_pool, 2,
-            sizeof(ngx_nsoc_conf_addr_t)) != NGX_OK) {
+            sizeof(ngx_nlnk_conf_addr_t)) != NGX_OK) {
         return NGX_ERROR;
     }
 
@@ -412,22 +412,22 @@ static ngx_int_t ngx_nsoc_add_ports(ngx_conf_t *cf, ngx_array_t *ports,
 }
 
 static char *
-ngx_nsoc_optimize_servers(ngx_conf_t *cf, ngx_array_t *ports)
+ngx_nlnk_optimize_servers(ngx_conf_t *cf, ngx_array_t *ports)
 {
     ngx_uint_t i, p, last, bind_wildcard;
     ngx_listening_t *ls;
-    ngx_nsoc_port_t *stport;
-    ngx_nsoc_conf_port_t *port;
-    ngx_nsoc_conf_addr_t *addr;
-    ngx_nsoc_core_srv_conf_t *cscf;
+    ngx_nlnk_port_t *stport;
+    ngx_nlnk_conf_port_t *port;
+    ngx_nlnk_conf_addr_t *addr;
+    ngx_nlnk_core_srv_conf_t *cscf;
 
     port = ports->elts;
     for (p = 0; p < ports->nelts; p++) {
 
         ngx_sort(
                 port[p].addrs.elts, (size_t) port[p].addrs.nelts,
-                sizeof(ngx_nsoc_conf_addr_t),
-                ngx_nsoc_cmp_conf_addrs);
+                sizeof(ngx_nlnk_conf_addr_t),
+                ngx_nlnk_cmp_conf_addrs);
 
         addr = port[p].addrs.elts;
         last = port[p].addrs.nelts;
@@ -461,12 +461,12 @@ ngx_nsoc_optimize_servers(ngx_conf_t *cf, ngx_array_t *ports)
             }
 
             ls->addr_ntop = 1;
-            ls->handler = ngx_nsoc_init_connection;
+            ls->handler = ngx_nlnk_init_connection;
             ls->pool_size = 256;
             ls->type = addr[i].opt.type;
 
             cscf =
-                    addr->opt.ctx->srv_conf[ngx_nsoc_core_module.ctx_index];
+                    addr->opt.ctx->srv_conf[ngx_nlnk_core_module.ctx_index];
 
             ls->logp = cscf->error_log;
             ls->log.data = &ls->addr_text;
@@ -491,7 +491,7 @@ ngx_nsoc_optimize_servers(ngx_conf_t *cf, ngx_array_t *ports)
             ls->reuseport = addr[i].opt.reuseport;
 #endif
 
-            stport = ngx_palloc(cf->pool, sizeof(ngx_nsoc_port_t));
+            stport = ngx_palloc(cf->pool, sizeof(ngx_nlnk_port_t));
             if (stport == NULL) {
                 return NGX_CONF_ERROR ;
             }
@@ -503,13 +503,13 @@ ngx_nsoc_optimize_servers(ngx_conf_t *cf, ngx_array_t *ports)
             switch (ls->sockaddr->sa_family) {
 #if (NGX_HAVE_INET6)
             case AF_INET6:
-                if (ngx_nsoc_add_addrs6(cf, stport, addr) != NGX_OK) {
+                if (ngx_nlnk_add_addrs6(cf, stport, addr) != NGX_OK) {
                     return NGX_CONF_ERROR ;
                 }
             break;
 #endif
             default: /* AF_INET */
-                if (ngx_nsoc_add_addrs(cf, stport, addr) != NGX_OK) {
+                if (ngx_nlnk_add_addrs(cf, stport, addr) != NGX_OK) {
                     return NGX_CONF_ERROR ;
                 }
             break;
@@ -527,18 +527,18 @@ ngx_nsoc_optimize_servers(ngx_conf_t *cf, ngx_array_t *ports)
     return NGX_CONF_OK;
 }
 
-static ngx_int_t ngx_nsoc_add_addrs(ngx_conf_t *cf,
-        ngx_nsoc_port_t *stport, ngx_nsoc_conf_addr_t *addr)
+static ngx_int_t ngx_nlnk_add_addrs(ngx_conf_t *cf,
+        ngx_nlnk_port_t *stport, ngx_nlnk_conf_addr_t *addr)
 {
     u_char *p;
     size_t len;
     ngx_uint_t i;
     struct sockaddr_in *sin;
-    ngx_nsoc_in_addr_t *addrs;
+    ngx_nlnk_in_addr_t *addrs;
     u_char buf[NGX_SOCKADDR_STRLEN];
 
     stport->addrs = ngx_pcalloc(
-            cf->pool, stport->naddrs * sizeof(ngx_nsoc_in_addr_t));
+            cf->pool, stport->naddrs * sizeof(ngx_nlnk_in_addr_t));
     if (stport->addrs == NULL) {
         return NGX_ERROR;
     }
@@ -575,18 +575,18 @@ static ngx_int_t ngx_nsoc_add_addrs(ngx_conf_t *cf,
 
 #if (NGX_HAVE_INET6)
 
-static ngx_int_t ngx_nsoc_add_addrs6(ngx_conf_t *cf,
-        ngx_nsoc_port_t *stport, ngx_nsoc_conf_addr_t *addr)
+static ngx_int_t ngx_nlnk_add_addrs6(ngx_conf_t *cf,
+        ngx_nlnk_port_t *stport, ngx_nlnk_conf_addr_t *addr)
 {
     u_char *p;
     size_t len;
     ngx_uint_t i;
     struct sockaddr_in6 *sin6;
-    ngx_nsoc_in6_addr_t *addrs6;
+    ngx_nlnk_in6_addr_t *addrs6;
     u_char buf[NGX_SOCKADDR_STRLEN];
 
     stport->addrs = ngx_pcalloc(
-            cf->pool, stport->naddrs * sizeof(ngx_nsoc_in6_addr_t));
+            cf->pool, stport->naddrs * sizeof(ngx_nlnk_in6_addr_t));
     if (stport->addrs == NULL) {
         return NGX_ERROR;
     }
@@ -623,13 +623,13 @@ static ngx_int_t ngx_nsoc_add_addrs6(ngx_conf_t *cf,
 
 #endif
 
-static ngx_int_t ngx_nsoc_cmp_conf_addrs(const void *one,
+static ngx_int_t ngx_nlnk_cmp_conf_addrs(const void *one,
         const void *two)
 {
-    ngx_nsoc_conf_addr_t *first, *second;
+    ngx_nlnk_conf_addr_t *first, *second;
 
-    first = (ngx_nsoc_conf_addr_t *) one;
-    second = (ngx_nsoc_conf_addr_t *) two;
+    first = (ngx_nlnk_conf_addr_t *) one;
+    second = (ngx_nlnk_conf_addr_t *) two;
 
     if (first->opt.wildcard) {
         /* a wildcard must be the last resort, shift it to the end */

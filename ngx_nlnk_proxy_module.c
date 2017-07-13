@@ -6,15 +6,15 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 
-#include "ngx_nsoc.h"
+#include "ngx_nlnk.h"
 
 typedef struct {
     ngx_addr_t *addr;
-    ngx_nsoc_complex_value_t *value;
+    ngx_nlnk_complex_value_t *value;
 #if (NGX_HAVE_TRANSPARENT_PROXY)
     ngx_uint_t transparent; /* unsigned  transparent:1; */
 #endif
-} ngx_nsoc_upstream_local_t;
+} ngx_nlnk_upstream_local_t;
 
 typedef struct {
     ngx_msec_t connect_timeout;
@@ -27,7 +27,7 @@ typedef struct {
     ngx_uint_t next_upstream_tries;
     ngx_flag_t next_upstream;
 
-    ngx_nsoc_upstream_local_t *local;
+    ngx_nlnk_upstream_local_t *local;
 
     ngx_flag_t noise_enable;
 
@@ -36,153 +36,153 @@ typedef struct {
     ngx_str_t client_private_key_file;
     ngx_str_t server_public_key_file;
 
-    ngx_nsoc_upstream_srv_conf_t *upstream;
-    ngx_nsoc_complex_value_t *upstream_value;
+    ngx_nlnk_upstream_srv_conf_t *upstream;
+    ngx_nlnk_complex_value_t *upstream_value;
 
-} ngx_nsoc_proxy_srv_conf_t;
+} ngx_nlnk_proxy_srv_conf_t;
 
-static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s);
-static ngx_int_t ngx_nsoc_proxy_eval(ngx_nsoc_session_t *s,
-        ngx_nsoc_proxy_srv_conf_t *pscf);
-static ngx_int_t ngx_nsoc_proxy_set_local(ngx_nsoc_session_t *s,
-        ngx_nsoc_upstream_t *u, ngx_nsoc_upstream_local_t *local);
-static void ngx_nsoc_proxy_connect(ngx_nsoc_session_t *s);
-static void ngx_nsoc_proxy_init_upstream(ngx_nsoc_session_t *s);
-static void ngx_nsoc_proxy_resolve_handler(ngx_resolver_ctx_t *ctx);
-static void ngx_nsoc_proxy_upstream_handler(ngx_event_t *ev);
-static void ngx_nsoc_proxy_downstream_handler(ngx_event_t *ev);
-static void ngx_nsoc_proxy_process_connection(ngx_event_t *ev,
+static void ngx_nlnk_proxy_handler(ngx_nlnk_session_t *s);
+static ngx_int_t ngx_nlnk_proxy_eval(ngx_nlnk_session_t *s,
+        ngx_nlnk_proxy_srv_conf_t *pscf);
+static ngx_int_t ngx_nlnk_proxy_set_local(ngx_nlnk_session_t *s,
+        ngx_nlnk_upstream_t *u, ngx_nlnk_upstream_local_t *local);
+static void ngx_nlnk_proxy_connect(ngx_nlnk_session_t *s);
+static void ngx_nlnk_proxy_init_upstream(ngx_nlnk_session_t *s);
+static void ngx_nlnk_proxy_resolve_handler(ngx_resolver_ctx_t *ctx);
+static void ngx_nlnk_proxy_upstream_handler(ngx_event_t *ev);
+static void ngx_nlnk_proxy_downstream_handler(ngx_event_t *ev);
+static void ngx_nlnk_proxy_process_connection(ngx_event_t *ev,
         ngx_uint_t from_upstream);
-static void ngx_nsoc_proxy_connect_handler(ngx_event_t *ev);
-static ngx_int_t ngx_nsoc_proxy_test_connect(ngx_connection_t *c);
-static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
+static void ngx_nlnk_proxy_connect_handler(ngx_event_t *ev);
+static ngx_int_t ngx_nlnk_proxy_test_connect(ngx_connection_t *c);
+static void ngx_nlnk_proxy_process(ngx_nlnk_session_t *s,
         ngx_uint_t from_upstream, ngx_uint_t do_write);
-static void ngx_nsoc_proxy_next_upstream(ngx_nsoc_session_t *s);
-static void ngx_nsoc_proxy_finalize(ngx_nsoc_session_t *s, ngx_uint_t rc);
-static u_char *ngx_nsoc_proxy_log_error(ngx_log_t *log, u_char *buf, size_t len);
+static void ngx_nlnk_proxy_next_upstream(ngx_nlnk_session_t *s);
+static void ngx_nlnk_proxy_finalize(ngx_nlnk_session_t *s, ngx_uint_t rc);
+static u_char *ngx_nlnk_proxy_log_error(ngx_log_t *log, u_char *buf, size_t len);
 
-static void *ngx_nsoc_proxy_create_srv_conf(ngx_conf_t *cf);
-static char *ngx_nsoc_proxy_merge_srv_conf(ngx_conf_t *cf, void *parent,
+static void *ngx_nlnk_proxy_create_srv_conf(ngx_conf_t *cf);
+static char *ngx_nlnk_proxy_merge_srv_conf(ngx_conf_t *cf, void *parent,
         void *child);
-static char *ngx_nsoc_proxy_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
-static char *ngx_nsoc_proxy_bind(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static char *ngx_nlnk_proxy_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static char *ngx_nlnk_proxy_bind(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
 /*noise*/
 
-static void ngx_nsoc_proxy_noise_init_connection(ngx_nsoc_session_t *s);
-static void ngx_nsoc_proxy_noise_handshake(ngx_connection_t *pc);
-static ngx_int_t ngx_nsoc_proxy_set_noisesocket(ngx_conf_t *cf,
-        ngx_nsoc_proxy_srv_conf_t *pscf);
+static void ngx_nlnk_proxy_noise_init_connection(ngx_nlnk_session_t *s);
+static void ngx_nlnk_proxy_noise_handshake(ngx_connection_t *pc);
+static ngx_int_t ngx_nlnk_proxy_set_noisesocket(ngx_conf_t *cf,
+        ngx_nlnk_proxy_srv_conf_t *pscf);
 
 /*end noise*/
 
-static ngx_command_t ngx_nsoc_proxy_commands[] =
+static ngx_command_t ngx_nlnk_proxy_commands[] =
 {
 
   { ngx_string("proxy_pass"),
-    NGX_NSOC_SRV_CONF | NGX_CONF_TAKE1,
-    ngx_nsoc_proxy_pass,
-    NGX_NSOC_SRV_CONF_OFFSET,
+    NGX_NLNK_SRV_CONF | NGX_CONF_TAKE1,
+    ngx_nlnk_proxy_pass,
+    NGX_NLNK_SRV_CONF_OFFSET,
     0,
     NULL },
 
   { ngx_string("proxy_bind"),
-    NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_TAKE12,
-    ngx_nsoc_proxy_bind,
-    NGX_NSOC_SRV_CONF_OFFSET,
+    NGX_NLNK_MAIN_CONF | NGX_NLNK_SRV_CONF | NGX_CONF_TAKE12,
+    ngx_nlnk_proxy_bind,
+    NGX_NLNK_SRV_CONF_OFFSET,
     0,
     NULL },
 
   { ngx_string("proxy_connect_timeout"),
-    NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_TAKE1,
+    NGX_NLNK_MAIN_CONF | NGX_NLNK_SRV_CONF | NGX_CONF_TAKE1,
     ngx_conf_set_msec_slot,
-    NGX_NSOC_SRV_CONF_OFFSET,
-    offsetof(ngx_nsoc_proxy_srv_conf_t, connect_timeout),
+    NGX_NLNK_SRV_CONF_OFFSET,
+    offsetof(ngx_nlnk_proxy_srv_conf_t, connect_timeout),
     NULL },
 
   { ngx_string("proxy_timeout"),
-    NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_TAKE1,
+    NGX_NLNK_MAIN_CONF | NGX_NLNK_SRV_CONF | NGX_CONF_TAKE1,
     ngx_conf_set_msec_slot,
-    NGX_NSOC_SRV_CONF_OFFSET,
-    offsetof(ngx_nsoc_proxy_srv_conf_t, timeout),
+    NGX_NLNK_SRV_CONF_OFFSET,
+    offsetof(ngx_nlnk_proxy_srv_conf_t, timeout),
     NULL },
 
   { ngx_string("proxy_buffer_size"),
-    NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_TAKE1,
+    NGX_NLNK_MAIN_CONF | NGX_NLNK_SRV_CONF | NGX_CONF_TAKE1,
     ngx_conf_set_size_slot,
-    NGX_NSOC_SRV_CONF_OFFSET,
-    offsetof(ngx_nsoc_proxy_srv_conf_t, buffer_size),
+    NGX_NLNK_SRV_CONF_OFFSET,
+    offsetof(ngx_nlnk_proxy_srv_conf_t, buffer_size),
     NULL },
 
   { ngx_string("proxy_upload_rate"),
-    NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_TAKE1,
+    NGX_NLNK_MAIN_CONF | NGX_NLNK_SRV_CONF | NGX_CONF_TAKE1,
     ngx_conf_set_size_slot,
-    NGX_NSOC_SRV_CONF_OFFSET,
-    offsetof(ngx_nsoc_proxy_srv_conf_t, upload_rate),
+    NGX_NLNK_SRV_CONF_OFFSET,
+    offsetof(ngx_nlnk_proxy_srv_conf_t, upload_rate),
     NULL },
 
   { ngx_string("proxy_download_rate"),
-    NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_TAKE1,
+    NGX_NLNK_MAIN_CONF | NGX_NLNK_SRV_CONF | NGX_CONF_TAKE1,
     ngx_conf_set_size_slot,
-    NGX_NSOC_SRV_CONF_OFFSET,
-    offsetof(ngx_nsoc_proxy_srv_conf_t, download_rate),
+    NGX_NLNK_SRV_CONF_OFFSET,
+    offsetof(ngx_nlnk_proxy_srv_conf_t, download_rate),
     NULL },
 
   { ngx_string("proxy_responses"),
-    NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_TAKE1,
+    NGX_NLNK_MAIN_CONF | NGX_NLNK_SRV_CONF | NGX_CONF_TAKE1,
     ngx_conf_set_num_slot,
-    NGX_NSOC_SRV_CONF_OFFSET,
-    offsetof(ngx_nsoc_proxy_srv_conf_t, responses),
+    NGX_NLNK_SRV_CONF_OFFSET,
+    offsetof(ngx_nlnk_proxy_srv_conf_t, responses),
     NULL },
 
   { ngx_string("proxy_next_upstream"),
-    NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_FLAG,
+    NGX_NLNK_MAIN_CONF | NGX_NLNK_SRV_CONF | NGX_CONF_FLAG,
     ngx_conf_set_flag_slot,
-    NGX_NSOC_SRV_CONF_OFFSET,
-    offsetof(ngx_nsoc_proxy_srv_conf_t, next_upstream),
+    NGX_NLNK_SRV_CONF_OFFSET,
+    offsetof(ngx_nlnk_proxy_srv_conf_t, next_upstream),
     NULL },
 
   { ngx_string("proxy_next_upstream_tries"),
-    NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_TAKE1,
+    NGX_NLNK_MAIN_CONF | NGX_NLNK_SRV_CONF | NGX_CONF_TAKE1,
     ngx_conf_set_num_slot,
-    NGX_NSOC_SRV_CONF_OFFSET,
-    offsetof(ngx_nsoc_proxy_srv_conf_t, next_upstream_tries),
+    NGX_NLNK_SRV_CONF_OFFSET,
+    offsetof(ngx_nlnk_proxy_srv_conf_t, next_upstream_tries),
     NULL },
 
   { ngx_string("proxy_next_upstream_timeout"),
-    NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_TAKE1,
+    NGX_NLNK_MAIN_CONF | NGX_NLNK_SRV_CONF | NGX_CONF_TAKE1,
     ngx_conf_set_msec_slot,
-    NGX_NSOC_SRV_CONF_OFFSET,
-    offsetof(ngx_nsoc_proxy_srv_conf_t, next_upstream_timeout),
+    NGX_NLNK_SRV_CONF_OFFSET,
+    offsetof(ngx_nlnk_proxy_srv_conf_t, next_upstream_timeout),
     NULL },
 
   /*noise*/
   { ngx_string("proxy_noise"),
-    NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_FLAG,
+    NGX_NLNK_MAIN_CONF | NGX_NLNK_SRV_CONF | NGX_CONF_FLAG,
     ngx_conf_set_flag_slot,
-    NGX_NSOC_SRV_CONF_OFFSET,
-    offsetof(ngx_nsoc_proxy_srv_conf_t, noise_enable),
+    NGX_NLNK_SRV_CONF_OFFSET,
+    offsetof(ngx_nlnk_proxy_srv_conf_t, noise_enable),
     NULL },
 
   { ngx_string("client_private_key_file"),
-    NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_TAKE1,
+    NGX_NLNK_MAIN_CONF | NGX_NLNK_SRV_CONF | NGX_CONF_TAKE1,
     ngx_conf_set_str_slot,
-    NGX_NSOC_SRV_CONF_OFFSET,
-    offsetof(ngx_nsoc_proxy_srv_conf_t, client_private_key_file),
+    NGX_NLNK_SRV_CONF_OFFSET,
+    offsetof(ngx_nlnk_proxy_srv_conf_t, client_private_key_file),
     NULL },
 
   { ngx_string("server_public_key_file"),
-    NGX_NSOC_MAIN_CONF | NGX_NSOC_SRV_CONF | NGX_CONF_TAKE1,
+    NGX_NLNK_MAIN_CONF | NGX_NLNK_SRV_CONF | NGX_CONF_TAKE1,
     ngx_conf_set_str_slot,
-    NGX_NSOC_SRV_CONF_OFFSET,
-    offsetof(ngx_nsoc_proxy_srv_conf_t, server_public_key_file),
+    NGX_NLNK_SRV_CONF_OFFSET,
+    offsetof(ngx_nlnk_proxy_srv_conf_t, server_public_key_file),
     NULL },
   /*end noise*/
 
   ngx_null_command
 };
 
-static ngx_nsoc_module_t ngx_nsoc_proxy_module_ctx =
+static ngx_nlnk_module_t ngx_nlnk_proxy_module_ctx =
 {
   NULL, /* preconfiguration */
   NULL, /* postconfiguration */
@@ -190,16 +190,16 @@ static ngx_nsoc_module_t ngx_nsoc_proxy_module_ctx =
   NULL, /* create main configuration */
   NULL, /* init main configuration */
 
-  ngx_nsoc_proxy_create_srv_conf, /* create server configuration */
-  ngx_nsoc_proxy_merge_srv_conf /* merge server configuration */
+  ngx_nlnk_proxy_create_srv_conf, /* create server configuration */
+  ngx_nlnk_proxy_merge_srv_conf /* merge server configuration */
 };
 
-ngx_module_t ngx_nsoc_proxy_module =
+ngx_module_t ngx_nlnk_proxy_module =
 {
   NGX_MODULE_V1,
-  &ngx_nsoc_proxy_module_ctx, /* module context */
-  ngx_nsoc_proxy_commands, /* module directives */
-  NGX_NSOC_MODULE, /* module type */
+  &ngx_nlnk_proxy_module_ctx, /* module context */
+  ngx_nlnk_proxy_commands, /* module directives */
+  NGX_NLNK_MODULE, /* module type */
   NULL, /* init master */
   NULL, /* init module */
   NULL, /* init process */
@@ -210,60 +210,60 @@ ngx_module_t ngx_nsoc_proxy_module =
   NGX_MODULE_V1_PADDING
 };
 
-static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s)
+static void ngx_nlnk_proxy_handler(ngx_nlnk_session_t *s)
 {
     u_char *p;
     ngx_str_t *host;
     ngx_uint_t i;
     ngx_connection_t *c;
     ngx_resolver_ctx_t *ctx, temp;
-    ngx_nsoc_upstream_t *u;
-    ngx_nsoc_core_srv_conf_t *cscf;
-    ngx_nsoc_proxy_srv_conf_t *pscf;
-    ngx_nsoc_upstream_srv_conf_t *uscf, **uscfp;
-    ngx_nsoc_upstream_main_conf_t *umcf;
+    ngx_nlnk_upstream_t *u;
+    ngx_nlnk_core_srv_conf_t *cscf;
+    ngx_nlnk_proxy_srv_conf_t *pscf;
+    ngx_nlnk_upstream_srv_conf_t *uscf, **uscfp;
+    ngx_nlnk_upstream_main_conf_t *umcf;
 
     c = s->connection;
 
-    pscf = ngx_nsoc_get_module_srv_conf(s, ngx_nsoc_proxy_module);
+    pscf = ngx_nlnk_get_module_srv_conf(s, ngx_nlnk_proxy_module);
 
     ngx_log_debug0(NGX_LOG_DEBUG_STREAM, c->log, 0, "proxy connection handler");
 
-    u = ngx_pcalloc(c->pool, sizeof(ngx_nsoc_upstream_t));
+    u = ngx_pcalloc(c->pool, sizeof(ngx_nlnk_upstream_t));
     if (u == NULL) {
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+        ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
         return;
     }
 
     s->upstream = u;
 
-    s->log_handler = ngx_nsoc_proxy_log_error;
+    s->log_handler = ngx_nlnk_proxy_log_error;
 
     u->peer.log = c->log;
     u->peer.log_error = NGX_ERROR_ERR;
 
-    if (ngx_nsoc_proxy_set_local(s, u, pscf->local) != NGX_OK) {
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+    if (ngx_nlnk_proxy_set_local(s, u, pscf->local) != NGX_OK) {
+        ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
         return;
     }
 
     u->peer.type = c->type;
     u->start_sec = ngx_time();
 
-    c->write->handler = ngx_nsoc_proxy_downstream_handler;
-    c->read->handler = ngx_nsoc_proxy_downstream_handler;
+    c->write->handler = ngx_nlnk_proxy_downstream_handler;
+    c->read->handler = ngx_nlnk_proxy_downstream_handler;
 
     s->upstream_states = ngx_array_create(
-            c->pool, 1, sizeof(ngx_nsoc_upstream_state_t));
+            c->pool, 1, sizeof(ngx_nlnk_upstream_state_t));
     if (s->upstream_states == NULL) {
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+        ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
         return;
     }
 
     if (c->type == SOCK_STREAM) {
         p = ngx_pnalloc(c->pool, pscf->buffer_size);
         if (p == NULL) {
-            ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+            ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
             return;
         }
 
@@ -278,8 +278,8 @@ static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s)
     }
 
     if (pscf->upstream_value) {
-        if (ngx_nsoc_proxy_eval(s, pscf) != NGX_OK) {
-            ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+        if (ngx_nlnk_proxy_eval(s, pscf) != NGX_OK) {
+            ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
             return;
         }
     }
@@ -291,7 +291,7 @@ static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s)
     } else {
         host = &u->resolved->host;
 
-        umcf = ngx_nsoc_get_module_main_conf(s, ngx_nsoc_upstream_module);
+        umcf = ngx_nlnk_get_module_main_conf(s, ngx_nlnk_upstream_module);
 
         uscfp = umcf->upstreams.elts;
 
@@ -315,17 +315,17 @@ static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s)
                 ngx_log_error(
                         NGX_LOG_ERR, c->log, 0, "no port in upstream \"%V\"",
                         host);
-                ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+                ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
                 return;
             }
 
-            if (ngx_nsoc_upstream_create_round_robin_peer(
+            if (ngx_nlnk_upstream_create_round_robin_peer(
                     s, u->resolved) != NGX_OK) {
-                ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+                ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
                 return;
             }
 
-            ngx_nsoc_proxy_connect(s);
+            ngx_nlnk_proxy_connect(s);
 
             return;
         }
@@ -333,17 +333,17 @@ static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s)
         if (u->resolved->port == 0) {
             ngx_log_error(
                     NGX_LOG_ERR, c->log, 0, "no port in upstream \"%V\"", host);
-            ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+            ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
             return;
         }
 
         temp.name = *host;
 
-        cscf = ngx_nsoc_get_module_srv_conf(s, ngx_nsoc_core_module);
+        cscf = ngx_nlnk_get_module_srv_conf(s, ngx_nlnk_core_module);
 
         ctx = ngx_resolve_start(cscf->resolver, &temp);
         if (ctx == NULL) {
-            ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+            ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
             return;
         }
 
@@ -351,12 +351,12 @@ static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s)
             ngx_log_error(
                     NGX_LOG_ERR, c->log, 0, "no resolver defined to resolve %V",
                     host);
-            ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+            ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
             return;
         }
 
         ctx->name = *host;
-        ctx->handler = ngx_nsoc_proxy_resolve_handler;
+        ctx->handler = ngx_nlnk_proxy_resolve_handler;
         ctx->data = s;
         ctx->timeout = cscf->resolver_timeout;
 
@@ -364,7 +364,7 @@ static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s)
 
         if (ngx_resolve_name(ctx) != NGX_OK) {
             u->resolved->ctx = NULL;
-            ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+            ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
             return;
         }
 
@@ -375,14 +375,14 @@ static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s)
 
     if (uscf == NULL) {
         ngx_log_error(NGX_LOG_ALERT, c->log, 0, "no upstream configuration");
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+        ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
         return;
     }
 
     u->upstream = uscf;
 
     if (uscf->peer.init(s, uscf) != NGX_OK) {
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+        ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
         return;
     }
 
@@ -393,17 +393,17 @@ static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s)
         u->peer.tries = pscf->next_upstream_tries;
     }
 
-    ngx_nsoc_proxy_connect(s);
+    ngx_nlnk_proxy_connect(s);
 }
 
-static ngx_int_t ngx_nsoc_proxy_eval(ngx_nsoc_session_t *s,
-        ngx_nsoc_proxy_srv_conf_t *pscf)
+static ngx_int_t ngx_nlnk_proxy_eval(ngx_nlnk_session_t *s,
+        ngx_nlnk_proxy_srv_conf_t *pscf)
 {
     ngx_str_t host;
     ngx_url_t url;
-    ngx_nsoc_upstream_t *u;
+    ngx_nlnk_upstream_t *u;
 
-    if (ngx_nsoc_complex_value(s, pscf->upstream_value, &host) != NGX_OK) {
+    if (ngx_nlnk_complex_value(s, pscf->upstream_value, &host) != NGX_OK) {
         return NGX_ERROR;
     }
 
@@ -425,7 +425,7 @@ static ngx_int_t ngx_nsoc_proxy_eval(ngx_nsoc_session_t *s,
     u = s->upstream;
 
     u->resolved = ngx_pcalloc(
-            s->connection->pool, sizeof(ngx_nsoc_upstream_resolved_t));
+            s->connection->pool, sizeof(ngx_nlnk_upstream_resolved_t));
     if (u->resolved == NULL) {
         return NGX_ERROR;
     }
@@ -444,8 +444,8 @@ static ngx_int_t ngx_nsoc_proxy_eval(ngx_nsoc_session_t *s,
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nsoc_proxy_set_local(ngx_nsoc_session_t *s,
-        ngx_nsoc_upstream_t *u, ngx_nsoc_upstream_local_t *local)
+static ngx_int_t ngx_nlnk_proxy_set_local(ngx_nlnk_session_t *s,
+        ngx_nlnk_upstream_t *u, ngx_nlnk_upstream_local_t *local)
 {
     ngx_int_t rc;
     ngx_str_t val;
@@ -465,7 +465,7 @@ static ngx_int_t ngx_nsoc_proxy_set_local(ngx_nsoc_session_t *s,
         return NGX_OK;
     }
 
-    if (ngx_nsoc_complex_value(s, local->value, &val) != NGX_OK) {
+    if (ngx_nlnk_complex_value(s, local->value, &val) != NGX_OK) {
         return NGX_ERROR;
     }
 
@@ -496,18 +496,18 @@ static ngx_int_t ngx_nsoc_proxy_set_local(ngx_nsoc_session_t *s,
     return NGX_OK;
 }
 
-static void ngx_nsoc_proxy_connect(ngx_nsoc_session_t *s)
+static void ngx_nlnk_proxy_connect(ngx_nlnk_session_t *s)
 {
     ngx_int_t rc;
     ngx_connection_t *c, *pc;
-    ngx_nsoc_upstream_t *u;
-    ngx_nsoc_proxy_srv_conf_t *pscf;
+    ngx_nlnk_upstream_t *u;
+    ngx_nlnk_proxy_srv_conf_t *pscf;
 
     c = s->connection;
 
     c->log->action = "connecting to upstream";
 
-    pscf = ngx_nsoc_get_module_srv_conf(s, ngx_nsoc_proxy_module);
+    pscf = ngx_nlnk_get_module_srv_conf(s, ngx_nlnk_proxy_module);
 
     u = s->upstream;
 
@@ -519,11 +519,11 @@ static void ngx_nsoc_proxy_connect(ngx_nsoc_session_t *s)
 
     u->state = ngx_array_push(s->upstream_states);
     if (u->state == NULL) {
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+        ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
         return;
     }
 
-    ngx_memzero(u->state, sizeof(ngx_nsoc_upstream_state_t));
+    ngx_memzero(u->state, sizeof(ngx_nlnk_upstream_state_t));
 
     u->state->connect_time = (ngx_msec_t) -1;
     u->state->first_byte_time = (ngx_msec_t) -1;
@@ -534,7 +534,7 @@ static void ngx_nsoc_proxy_connect(ngx_nsoc_session_t *s)
     ngx_log_debug1(NGX_LOG_DEBUG_STREAM, c->log, 0, "proxy connect: %i", rc);
 
     if (rc == NGX_ERROR) {
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+        ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
         return;
     }
 
@@ -542,12 +542,12 @@ static void ngx_nsoc_proxy_connect(ngx_nsoc_session_t *s)
 
     if (rc == NGX_BUSY) {
         ngx_log_error(NGX_LOG_ERR, c->log, 0, "no live upstreams");
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_BAD_GATEWAY);
+        ngx_nlnk_proxy_finalize(s, NGX_NLNK_BAD_GATEWAY);
         return;
     }
 
     if (rc == NGX_DECLINED) {
-        ngx_nsoc_proxy_next_upstream(s);
+        ngx_nlnk_proxy_next_upstream(s);
         return;
     }
 
@@ -562,31 +562,31 @@ static void ngx_nsoc_proxy_connect(ngx_nsoc_session_t *s)
     pc->write->log = c->log;
 
     if (rc != NGX_AGAIN) {
-        ngx_nsoc_proxy_init_upstream(s);
+        ngx_nlnk_proxy_init_upstream(s);
         return;
     }
 
-    pc->read->handler = ngx_nsoc_proxy_connect_handler;
-    pc->write->handler = ngx_nsoc_proxy_connect_handler;
+    pc->read->handler = ngx_nlnk_proxy_connect_handler;
+    pc->write->handler = ngx_nlnk_proxy_connect_handler;
 
     ngx_add_timer(pc->write, pscf->connect_timeout);
 }
 
-static void ngx_nsoc_proxy_init_upstream(ngx_nsoc_session_t *s)
+static void ngx_nlnk_proxy_init_upstream(ngx_nlnk_session_t *s)
 {
     int tcp_nodelay;
     u_char *p;
     ngx_chain_t *cl;
     ngx_connection_t *c, *pc;
     ngx_log_handler_pt handler;
-    ngx_nsoc_upstream_t *u;
-    ngx_nsoc_core_srv_conf_t *cscf;
-    ngx_nsoc_proxy_srv_conf_t *pscf;
+    ngx_nlnk_upstream_t *u;
+    ngx_nlnk_core_srv_conf_t *cscf;
+    ngx_nlnk_proxy_srv_conf_t *pscf;
 
     u = s->upstream;
     pc = u->peer.connection;
 
-    cscf = ngx_nsoc_get_module_srv_conf(s, ngx_nsoc_core_module);
+    cscf = ngx_nlnk_get_module_srv_conf(s, ngx_nlnk_core_module);
 
     if (pc->type == SOCK_STREAM && cscf->tcp_nodelay
             && pc->tcp_nodelay == NGX_TCP_NODELAY_UNSET) {
@@ -599,20 +599,20 @@ static void ngx_nsoc_proxy_init_upstream(ngx_nsoc_session_t *s)
                 sizeof(int)) == -1) {
             ngx_connection_error(
                     pc, ngx_socket_errno, "setsockopt(TCP_NODELAY) failed");
-            ngx_nsoc_proxy_next_upstream(s);
+            ngx_nlnk_proxy_next_upstream(s);
             return;
         }
 
         pc->tcp_nodelay = NGX_TCP_NODELAY_SET;
     }
 
-    pscf = ngx_nsoc_get_module_srv_conf(s, ngx_nsoc_proxy_module);
+    pscf = ngx_nlnk_get_module_srv_conf(s, ngx_nlnk_proxy_module);
 
     /*noise*/
     if ((pc->type == SOCK_STREAM) && (pscf->noise)) {
 
         if (s->client_noise_connection == NULL) {
-            ngx_nsoc_proxy_noise_init_connection(s);
+            ngx_nlnk_proxy_noise_init_connection(s);
             return;
         }
     }
@@ -643,7 +643,7 @@ static void ngx_nsoc_proxy_init_upstream(ngx_nsoc_session_t *s)
 
     if (u->peer.notify) {
         u->peer.notify(&u->peer, u->peer.data,
-        NGX_NSOC_UPSTREAM_NOTIFY_CONNECT);
+        NGX_NLNK_UPSTREAM_NOTIFY_CONNECT);
     }
 
     c->log->action = "proxying connection";
@@ -651,7 +651,7 @@ static void ngx_nsoc_proxy_init_upstream(ngx_nsoc_session_t *s)
     if (u->upstream_buf.start == NULL) {
         p = ngx_pnalloc(c->pool, pscf->buffer_size);
         if (p == NULL) {
-            ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+            ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
             return;
         }
 
@@ -669,13 +669,13 @@ static void ngx_nsoc_proxy_init_upstream(ngx_nsoc_session_t *s)
 
         cl = ngx_chain_get_free_buf(c->pool, &u->free);
         if (cl == NULL) {
-            ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+            ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
             return;
         }
 
         *cl->buf = *c->buffer;
 
-        cl->buf->tag = (ngx_buf_tag_t) &ngx_nsoc_proxy_module;
+        cl->buf->tag = (ngx_buf_tag_t) &ngx_nlnk_proxy_module;
         cl->buf->flush = 1;
         cl->buf->last_buf = (c->type == SOCK_DGRAM);
 
@@ -690,37 +690,37 @@ static void ngx_nsoc_proxy_init_upstream(ngx_nsoc_session_t *s)
 
     u->connected = 1;
 
-    pc->read->handler = ngx_nsoc_proxy_upstream_handler;
-    pc->write->handler = ngx_nsoc_proxy_upstream_handler;
+    pc->read->handler = ngx_nlnk_proxy_upstream_handler;
+    pc->write->handler = ngx_nlnk_proxy_upstream_handler;
 
     if (pc->read->ready || pc->read->eof) {
         ngx_post_event(pc->read, &ngx_posted_events);
     }
 
-    ngx_nsoc_proxy_process(s, 0, 1);
+    ngx_nlnk_proxy_process(s, 0, 1);
 }
 
 /*noise*/
-static void ngx_nsoc_proxy_noise_init_connection(ngx_nsoc_session_t *s)
+static void ngx_nlnk_proxy_noise_init_connection(ngx_nlnk_session_t *s)
 {
-    ngx_nsoc_upstream_t *u;
-    ngx_nsoc_proxy_srv_conf_t *pscf;
+    ngx_nlnk_upstream_t *u;
+    ngx_nlnk_proxy_srv_conf_t *pscf;
     ngx_connection_t *pc;
     ngx_int_t rc;
 
     u = s->upstream;
     pc = u->peer.connection;
-    pscf = ngx_nsoc_get_module_srv_conf(s, ngx_nsoc_proxy_module);
+    pscf = ngx_nlnk_get_module_srv_conf(s, ngx_nlnk_proxy_module);
 
-    if (ngx_nsoc_create_connection(
-            pscf->noise, pc, NGX_NSOC_BUFFER | NGX_NSOC_CLIENT) != NGX_OK) {
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+    if (ngx_nlnk_create_connection(
+            pscf->noise, pc, NGX_NLNK_BUFFER | NGX_NLNK_CLIENT) != NGX_OK) {
+        ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
         return;
     }
 
     s->connection->log->action = "NOISE handshaking to upstream";
 
-    rc = ngx_nsoc_handshake(pc);
+    rc = ngx_nlnk_handshake(pc);
 
     if (rc == NGX_AGAIN) {
 
@@ -728,7 +728,7 @@ static void ngx_nsoc_proxy_noise_init_connection(ngx_nsoc_session_t *s)
          ngx_add_timer(pc->write, pscf->connect_timeout);
          }*/
 
-        s->client_noise_connection->handler = ngx_nsoc_proxy_noise_handshake;
+        s->client_noise_connection->handler = ngx_nlnk_proxy_noise_handshake;
         return;
     }
     if (rc == NGX_ERROR) {
@@ -737,19 +737,19 @@ static void ngx_nsoc_proxy_noise_init_connection(ngx_nsoc_session_t *s)
                 "NOISE error client handshaking");
     }
 
-    ngx_nsoc_proxy_noise_handshake(pc);
+    ngx_nlnk_proxy_noise_handshake(pc);
 }
 
-static void ngx_nsoc_proxy_noise_handshake(ngx_connection_t *pc)
+static void ngx_nlnk_proxy_noise_handshake(ngx_connection_t *pc)
 {
     //long                          rc;
-    ngx_nsoc_session_t *s;
-    //ngx_nsoc_upstream_t        *u;
-    //ngx_nsoc_proxy_srv_conf_t  *pscf;
+    ngx_nlnk_session_t *s;
+    //ngx_nlnk_upstream_t        *u;
+    //ngx_nlnk_proxy_srv_conf_t  *pscf;
 
     s = pc->data;
 
-    //pscf = ngx_nsoc_get_module_srv_conf(s, ngx_nsoc_proxy_module);
+    //pscf = ngx_nlnk_get_module_srv_conf(s, ngx_nlnk_proxy_module);
 
     ngx_log_debug8(
             NGX_LOG_DEBUG_EVENT,
@@ -774,29 +774,29 @@ static void ngx_nsoc_proxy_noise_handshake(ngx_connection_t *pc)
             ngx_del_timer(pc->write);
         }
 
-        ngx_nsoc_proxy_init_upstream(s);
+        ngx_nlnk_proxy_init_upstream(s);
 
         return;
     }
 
 //failed:
 
-    ngx_nsoc_proxy_next_upstream(s);
+    ngx_nlnk_proxy_next_upstream(s);
 }
 
 /*end noise*/
 
-static void ngx_nsoc_proxy_downstream_handler(ngx_event_t *ev)
+static void ngx_nlnk_proxy_downstream_handler(ngx_event_t *ev)
 {
-    ngx_nsoc_proxy_process_connection(ev, ev->write);
+    ngx_nlnk_proxy_process_connection(ev, ev->write);
 }
 
-static void ngx_nsoc_proxy_resolve_handler(ngx_resolver_ctx_t *ctx)
+static void ngx_nlnk_proxy_resolve_handler(ngx_resolver_ctx_t *ctx)
 {
-    ngx_nsoc_session_t *s;
-    ngx_nsoc_upstream_t *u;
-    ngx_nsoc_proxy_srv_conf_t *pscf;
-    ngx_nsoc_upstream_resolved_t *ur;
+    ngx_nlnk_session_t *s;
+    ngx_nlnk_upstream_t *u;
+    ngx_nlnk_proxy_srv_conf_t *pscf;
+    ngx_nlnk_upstream_resolved_t *ur;
 
     s = ctx->data;
 
@@ -813,7 +813,7 @@ static void ngx_nsoc_proxy_resolve_handler(ngx_resolver_ctx_t *ctx)
                 "%V could not be resolved (%i: %s)", &ctx->name, ctx->state,
                 ngx_resolver_strerror(ctx->state));
 
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+        ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
         return;
     }
 
@@ -840,8 +840,8 @@ static void ngx_nsoc_proxy_resolve_handler(ngx_resolver_ctx_t *ctx)
     }
 #endif
 
-    if (ngx_nsoc_upstream_create_round_robin_peer(s, ur) != NGX_OK) {
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+    if (ngx_nlnk_upstream_create_round_robin_peer(s, ur) != NGX_OK) {
+        ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
         return;
     }
 
@@ -850,28 +850,28 @@ static void ngx_nsoc_proxy_resolve_handler(ngx_resolver_ctx_t *ctx)
 
     u->peer.start_time = ngx_current_msec;
 
-    pscf = ngx_nsoc_get_module_srv_conf(s, ngx_nsoc_proxy_module);
+    pscf = ngx_nlnk_get_module_srv_conf(s, ngx_nlnk_proxy_module);
 
     if (pscf->next_upstream_tries
             && u->peer.tries > pscf->next_upstream_tries) {
         u->peer.tries = pscf->next_upstream_tries;
     }
 
-    ngx_nsoc_proxy_connect(s);
+    ngx_nlnk_proxy_connect(s);
 }
 
-static void ngx_nsoc_proxy_upstream_handler(ngx_event_t *ev)
+static void ngx_nlnk_proxy_upstream_handler(ngx_event_t *ev)
 {
-    ngx_nsoc_proxy_process_connection(ev, !ev->write);
+    ngx_nlnk_proxy_process_connection(ev, !ev->write);
 }
 
-static void ngx_nsoc_proxy_process_connection(ngx_event_t *ev,
+static void ngx_nlnk_proxy_process_connection(ngx_event_t *ev,
         ngx_uint_t from_upstream)
 {
     ngx_connection_t *c, *pc;
-    ngx_nsoc_session_t *s;
-    ngx_nsoc_upstream_t *u;
-    ngx_nsoc_proxy_srv_conf_t *pscf;
+    ngx_nlnk_session_t *s;
+    ngx_nlnk_upstream_t *u;
+    ngx_nlnk_proxy_srv_conf_t *pscf;
 
     c = ev->data;
     s = c->data;
@@ -880,7 +880,7 @@ static void ngx_nsoc_proxy_process_connection(ngx_event_t *ev,
     c = s->connection;
     pc = u->peer.connection;
 
-    pscf = ngx_nsoc_get_module_srv_conf(s, ngx_nsoc_proxy_module);
+    pscf = ngx_nlnk_get_module_srv_conf(s, ngx_nlnk_proxy_module);
 
     if (ev->timedout) {
         ev->timedout = 0;
@@ -890,8 +890,8 @@ static void ngx_nsoc_proxy_process_connection(ngx_event_t *ev,
 
             if (!ev->ready) {
                 if (ngx_handle_read_event(ev, 0) != NGX_OK) {
-                    ngx_nsoc_proxy_finalize(s,
-                    NGX_NSOC_INTERNAL_SERVER_ERROR);
+                    ngx_nlnk_proxy_finalize(s,
+                    NGX_NLNK_INTERNAL_SERVER_ERROR);
                     return;
                 }
 
@@ -914,18 +914,18 @@ static void ngx_nsoc_proxy_process_connection(ngx_event_t *ev,
                     pc->read->ready = 0;
                     pc->read->eof = 1;
 
-                    ngx_nsoc_proxy_process(s, 1, 0);
+                    ngx_nlnk_proxy_process(s, 1, 0);
                     return;
                 }
 
                 if (u->received == 0) {
-                    ngx_nsoc_proxy_next_upstream(s);
+                    ngx_nlnk_proxy_next_upstream(s);
                     return;
                 }
             }
 
             ngx_connection_error(c, NGX_ETIMEDOUT, "connection timed out");
-            ngx_nsoc_proxy_finalize(s, NGX_NSOC_OK);
+            ngx_nlnk_proxy_finalize(s, NGX_NLNK_OK);
             return;
         }
 
@@ -935,7 +935,7 @@ static void ngx_nsoc_proxy_process_connection(ngx_event_t *ev,
                 NGX_LOG_DEBUG_STREAM, c->log, 0, "stream connection delayed");
 
         if (ngx_handle_read_event(ev, 0) != NGX_OK) {
-            ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+            ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
         }
 
         return;
@@ -945,20 +945,20 @@ static void ngx_nsoc_proxy_process_connection(ngx_event_t *ev,
         return;
     }
 
-    ngx_nsoc_proxy_process(s, from_upstream, ev->write);
+    ngx_nlnk_proxy_process(s, from_upstream, ev->write);
 }
 
-static void ngx_nsoc_proxy_connect_handler(ngx_event_t *ev)
+static void ngx_nlnk_proxy_connect_handler(ngx_event_t *ev)
 {
     ngx_connection_t *c;
-    ngx_nsoc_session_t *s;
+    ngx_nlnk_session_t *s;
 
     c = ev->data;
     s = c->data;
 
     if (ev->timedout) {
         ngx_log_error(NGX_LOG_ERR, c->log, NGX_ETIMEDOUT, "upstream timed out");
-        ngx_nsoc_proxy_next_upstream(s);
+        ngx_nlnk_proxy_next_upstream(s);
         return;
     }
 
@@ -967,15 +967,15 @@ static void ngx_nsoc_proxy_connect_handler(ngx_event_t *ev)
     ngx_log_debug0(
             NGX_LOG_DEBUG_STREAM, c->log, 0, "stream proxy connect upstream");
 
-    if (ngx_nsoc_proxy_test_connect(c) != NGX_OK) {
-        ngx_nsoc_proxy_next_upstream(s);
+    if (ngx_nlnk_proxy_test_connect(c) != NGX_OK) {
+        ngx_nlnk_proxy_next_upstream(s);
         return;
     }
 
-    ngx_nsoc_proxy_init_upstream(s);
+    ngx_nlnk_proxy_init_upstream(s);
 }
 
-static ngx_int_t ngx_nsoc_proxy_test_connect(ngx_connection_t *c)
+static ngx_int_t ngx_nlnk_proxy_test_connect(ngx_connection_t *c)
 {
     int err;
     socklen_t len;
@@ -1016,7 +1016,7 @@ static ngx_int_t ngx_nsoc_proxy_test_connect(ngx_connection_t *c)
     return NGX_OK;
 }
 
-static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
+static void ngx_nlnk_proxy_process(ngx_nlnk_session_t *s,
         ngx_uint_t from_upstream, ngx_uint_t do_write)
 {
     off_t *received, limit;
@@ -1029,8 +1029,8 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
     ngx_chain_t *cl, **ll, **out, **busy;
     ngx_connection_t *c, *pc, *src, *dst;
     ngx_log_handler_pt handler;
-    ngx_nsoc_upstream_t *u;
-    ngx_nsoc_proxy_srv_conf_t *pscf;
+    ngx_nlnk_upstream_t *u;
+    ngx_nlnk_proxy_srv_conf_t *pscf;
 
     u = s->upstream;
 
@@ -1048,11 +1048,11 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
 
         c->log->handler = handler;
 
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_OK);
+        ngx_nlnk_proxy_finalize(s, NGX_NLNK_OK);
         return;
     }
 
-    pscf = ngx_nsoc_get_module_srv_conf(s, ngx_nsoc_proxy_module);
+    pscf = ngx_nlnk_get_module_srv_conf(s, ngx_nlnk_proxy_module);
 
     if (from_upstream) {
         src = pc;
@@ -1078,21 +1078,21 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
         if (do_write && dst) {
 
             if (*out || *busy || dst->buffered) {
-                rc = ngx_nsoc_top_filter(s, *out, from_upstream);
+                rc = ngx_nlnk_top_filter(s, *out, from_upstream);
 
                 if (rc == NGX_ERROR) {
                     if (c->type == SOCK_DGRAM && !from_upstream) {
-                        ngx_nsoc_proxy_next_upstream(s);
+                        ngx_nlnk_proxy_next_upstream(s);
                         return;
                     }
 
-                    ngx_nsoc_proxy_finalize(s, NGX_NSOC_OK);
+                    ngx_nlnk_proxy_finalize(s, NGX_NLNK_OK);
                     return;
                 }
 
                 ngx_chain_update_chains(
                         c->pool, &u->free, busy, out,
-                        (ngx_buf_tag_t) &ngx_nsoc_proxy_module);
+                        (ngx_buf_tag_t) &ngx_nlnk_proxy_module);
 
                 if (*busy == NULL) {
                     b->pos = b->start;
@@ -1129,7 +1129,7 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
 
             if (n == NGX_ERROR) {
                 if (c->type == SOCK_DGRAM && u->received == 0) {
-                    ngx_nsoc_proxy_next_upstream(s);
+                    ngx_nlnk_proxy_next_upstream(s);
                     return;
                 }
 
@@ -1165,8 +1165,8 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
 
                 cl = ngx_chain_get_free_buf(c->pool, &u->free);
                 if (cl == NULL) {
-                    ngx_nsoc_proxy_finalize(s,
-                    NGX_NSOC_INTERNAL_SERVER_ERROR);
+                    ngx_nlnk_proxy_finalize(s,
+                    NGX_NLNK_INTERNAL_SERVER_ERROR);
                     return;
                 }
 
@@ -1174,7 +1174,7 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
 
                 cl->buf->pos = b->last;
                 cl->buf->last = b->last + n;
-                cl->buf->tag = (ngx_buf_tag_t) &ngx_nsoc_proxy_module;
+                cl->buf->tag = (ngx_buf_tag_t) &ngx_nlnk_proxy_module;
 
                 cl->buf->temporary = (n ? 1 : 0);
                 cl->buf->last_buf = src->read->eof;
@@ -1205,20 +1205,20 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
 
         c->log->handler = handler;
 
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_OK);
+        ngx_nlnk_proxy_finalize(s, NGX_NLNK_OK);
         return;
     }
 
     flags = src->read->eof ? NGX_CLOSE_EVENT : 0;
 
     if (!src->shared && ngx_handle_read_event(src->read, flags) != NGX_OK) {
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+        ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
         return;
     }
 
     if (dst) {
         if (!dst->shared && ngx_handle_write_event(dst->write, 0) != NGX_OK) {
-            ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+            ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
             return;
         }
 
@@ -1231,12 +1231,12 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
     }
 }
 
-static void ngx_nsoc_proxy_next_upstream(ngx_nsoc_session_t *s)
+static void ngx_nlnk_proxy_next_upstream(ngx_nlnk_session_t *s)
 {
     ngx_msec_t timeout;
     ngx_connection_t *pc;
-    ngx_nsoc_upstream_t *u;
-    ngx_nsoc_proxy_srv_conf_t *pscf;
+    ngx_nlnk_upstream_t *u;
+    ngx_nlnk_proxy_srv_conf_t *pscf;
 
     ngx_log_debug0(
             NGX_LOG_DEBUG_STREAM, s->connection->log, 0,
@@ -1249,7 +1249,7 @@ static void ngx_nsoc_proxy_next_upstream(ngx_nsoc_session_t *s)
         ngx_log_error(
                 NGX_LOG_ERR, s->connection->log, 0,
                 "pending buffers on next upstream");
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
+        ngx_nlnk_proxy_finalize(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
         return;
     }
 
@@ -1258,13 +1258,13 @@ static void ngx_nsoc_proxy_next_upstream(ngx_nsoc_session_t *s)
         u->peer.sockaddr = NULL;
     }
 
-    pscf = ngx_nsoc_get_module_srv_conf(s, ngx_nsoc_proxy_module);
+    pscf = ngx_nlnk_get_module_srv_conf(s, ngx_nlnk_proxy_module);
 
     timeout = pscf->next_upstream_timeout;
 
     if (u->peer.tries == 0 || !pscf->next_upstream
             || (timeout && ngx_current_msec - u->peer.start_time >= timeout)) {
-        ngx_nsoc_proxy_finalize(s, NGX_NSOC_BAD_GATEWAY);
+        ngx_nlnk_proxy_finalize(s, NGX_NLNK_BAD_GATEWAY);
         return;
     }
 
@@ -1280,13 +1280,13 @@ static void ngx_nsoc_proxy_next_upstream(ngx_nsoc_session_t *s)
         u->peer.connection = NULL;
     }
 
-    ngx_nsoc_proxy_connect(s);
+    ngx_nlnk_proxy_connect(s);
 }
 
-static void ngx_nsoc_proxy_finalize(ngx_nsoc_session_t *s, ngx_uint_t rc)
+static void ngx_nlnk_proxy_finalize(ngx_nlnk_session_t *s, ngx_uint_t rc)
 {
     ngx_connection_t *pc;
-    ngx_nsoc_upstream_t *u;
+    ngx_nlnk_upstream_t *u;
 
     ngx_log_debug1(
             NGX_LOG_DEBUG_STREAM, s->connection->log, 0,
@@ -1330,16 +1330,16 @@ static void ngx_nsoc_proxy_finalize(ngx_nsoc_session_t *s, ngx_uint_t rc)
 
     noupstream:
 
-    ngx_nsoc_finalize_session(s, rc);
+    ngx_nlnk_finalize_session(s, rc);
 }
 
 static u_char *
-ngx_nsoc_proxy_log_error(ngx_log_t *log, u_char *buf, size_t len)
+ngx_nlnk_proxy_log_error(ngx_log_t *log, u_char *buf, size_t len)
 {
     u_char *p;
     ngx_connection_t *pc;
-    ngx_nsoc_session_t *s;
-    ngx_nsoc_upstream_t *u;
+    ngx_nlnk_session_t *s;
+    ngx_nlnk_upstream_t *u;
 
     s = log->data;
 
@@ -1363,11 +1363,11 @@ ngx_nsoc_proxy_log_error(ngx_log_t *log, u_char *buf, size_t len)
 }
 
 static void *
-ngx_nsoc_proxy_create_srv_conf(ngx_conf_t *cf)
+ngx_nlnk_proxy_create_srv_conf(ngx_conf_t *cf)
 {
-    ngx_nsoc_proxy_srv_conf_t *conf;
+    ngx_nlnk_proxy_srv_conf_t *conf;
 
-    conf = ngx_pcalloc(cf->pool, sizeof(ngx_nsoc_proxy_srv_conf_t));
+    conf = ngx_pcalloc(cf->pool, sizeof(ngx_nlnk_proxy_srv_conf_t));
     if (conf == NULL) {
         return NULL;
     }
@@ -1407,10 +1407,10 @@ ngx_nsoc_proxy_create_srv_conf(ngx_conf_t *cf)
 }
 
 static char *
-ngx_nsoc_proxy_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
+ngx_nlnk_proxy_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 {
-    ngx_nsoc_proxy_srv_conf_t *prev = parent;
-    ngx_nsoc_proxy_srv_conf_t *conf = child;
+    ngx_nlnk_proxy_srv_conf_t *prev = parent;
+    ngx_nlnk_proxy_srv_conf_t *conf = child;
 
     ngx_conf_merge_msec_value(
             conf->connect_timeout, prev->connect_timeout, 60000);
@@ -1451,7 +1451,7 @@ ngx_nsoc_proxy_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_str_value(
             conf->server_public_key_file, prev->server_public_key_file, "");
 
-    if (conf->noise_enable && ngx_nsoc_proxy_set_noisesocket(cf, conf) != NGX_OK) {
+    if (conf->noise_enable && ngx_nlnk_proxy_set_noisesocket(cf, conf) != NGX_OK) {
         return NGX_CONF_ERROR ;
     }
 
@@ -1462,8 +1462,8 @@ ngx_nsoc_proxy_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 
 /*noise*/
 
-static ngx_int_t ngx_nsoc_proxy_set_noisesocket(ngx_conf_t *cf,
-        ngx_nsoc_proxy_srv_conf_t *pscf)
+static ngx_int_t ngx_nlnk_proxy_set_noisesocket(ngx_conf_t *cf,
+        ngx_nlnk_proxy_srv_conf_t *pscf)
 {
     ngx_pool_cleanup_t *cln;
     ngx_array_t *private_key, *public_key;
@@ -1476,7 +1476,7 @@ static ngx_int_t ngx_nsoc_proxy_set_noisesocket(ngx_conf_t *cf,
 
     pscf->noise->log = cf->log;
 
-    if (ngx_nsoc_create(pscf->noise, NULL) != NGX_OK) {
+    if (ngx_nlnk_create(pscf->noise, NULL) != NGX_OK) {
         ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
                       "noise proxy module merge_conf error: unable to create noise ctx");
 
@@ -1488,7 +1488,7 @@ static ngx_int_t ngx_nsoc_proxy_set_noisesocket(ngx_conf_t *cf,
         return NGX_ERROR;
     }
 
-    cln->handler = ngx_nsoc_cleanup_ctx;
+    cln->handler = ngx_nlnk_cleanup_ctx;
     cln->data = pscf->noise;
 
     if (pscf->client_private_key_file.len == 0){
@@ -1541,41 +1541,41 @@ static ngx_int_t ngx_nsoc_proxy_set_noisesocket(ngx_conf_t *cf,
 /*end noise*/
 
 static char *
-ngx_nsoc_proxy_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ngx_nlnk_proxy_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    ngx_nsoc_proxy_srv_conf_t *pscf = conf;
+    ngx_nlnk_proxy_srv_conf_t *pscf = conf;
 
     ngx_url_t u;
     ngx_str_t *value, *url;
-    ngx_nsoc_complex_value_t cv;
-    ngx_nsoc_core_srv_conf_t *cscf;
-    ngx_nsoc_compile_complex_value_t ccv;
+    ngx_nlnk_complex_value_t cv;
+    ngx_nlnk_core_srv_conf_t *cscf;
+    ngx_nlnk_compile_complex_value_t ccv;
 
     if (pscf->upstream || pscf->upstream_value) {
         return "is duplicate";
     }
 
-    cscf = ngx_nsoc_conf_get_module_srv_conf(cf, ngx_nsoc_core_module);
+    cscf = ngx_nlnk_conf_get_module_srv_conf(cf, ngx_nlnk_core_module);
 
-    cscf->handler = ngx_nsoc_proxy_handler;
+    cscf->handler = ngx_nlnk_proxy_handler;
 
     value = cf->args->elts;
 
     url = &value[1];
 
-    ngx_memzero(&ccv, sizeof(ngx_nsoc_compile_complex_value_t));
+    ngx_memzero(&ccv, sizeof(ngx_nlnk_compile_complex_value_t));
 
     ccv.cf = cf;
     ccv.value = url;
     ccv.complex_value = &cv;
 
-    if (ngx_nsoc_compile_complex_value(&ccv) != NGX_OK) {
+    if (ngx_nlnk_compile_complex_value(&ccv) != NGX_OK) {
         return NGX_CONF_ERROR ;
     }
 
     if (cv.lengths) {
         pscf->upstream_value = ngx_palloc(
-                cf->pool, sizeof(ngx_nsoc_complex_value_t));
+                cf->pool, sizeof(ngx_nlnk_complex_value_t));
         if (pscf->upstream_value == NULL) {
             return NGX_CONF_ERROR ;
         }
@@ -1590,7 +1590,7 @@ ngx_nsoc_proxy_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     u.url = *url;
     u.no_resolve = 1;
 
-    pscf->upstream = ngx_nsoc_upstream_add(cf, &u, 0);
+    pscf->upstream = ngx_nlnk_upstream_add(cf, &u, 0);
     if (pscf->upstream == NULL) {
         return NGX_CONF_ERROR ;
     }
@@ -1599,15 +1599,15 @@ ngx_nsoc_proxy_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 static char *
-ngx_nsoc_proxy_bind(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ngx_nlnk_proxy_bind(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    ngx_nsoc_proxy_srv_conf_t *pscf = conf;
+    ngx_nlnk_proxy_srv_conf_t *pscf = conf;
 
     ngx_int_t rc;
     ngx_str_t *value;
-    ngx_nsoc_complex_value_t cv;
-    ngx_nsoc_upstream_local_t *local;
-    ngx_nsoc_compile_complex_value_t ccv;
+    ngx_nlnk_complex_value_t cv;
+    ngx_nlnk_upstream_local_t *local;
+    ngx_nlnk_compile_complex_value_t ccv;
 
     if (pscf->local != NGX_CONF_UNSET_PTR) {
         return "is duplicate";
@@ -1620,17 +1620,17 @@ ngx_nsoc_proxy_bind(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_OK;
     }
 
-    ngx_memzero(&ccv, sizeof(ngx_nsoc_compile_complex_value_t));
+    ngx_memzero(&ccv, sizeof(ngx_nlnk_compile_complex_value_t));
 
     ccv.cf = cf;
     ccv.value = &value[1];
     ccv.complex_value = &cv;
 
-    if (ngx_nsoc_compile_complex_value(&ccv) != NGX_OK) {
+    if (ngx_nlnk_compile_complex_value(&ccv) != NGX_OK) {
         return NGX_CONF_ERROR ;
     }
 
-    local = ngx_pcalloc(cf->pool, sizeof(ngx_nsoc_upstream_local_t));
+    local = ngx_pcalloc(cf->pool, sizeof(ngx_nlnk_upstream_local_t));
     if (local == NULL) {
         return NGX_CONF_ERROR ;
     }
@@ -1638,7 +1638,7 @@ ngx_nsoc_proxy_bind(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     pscf->local = local;
 
     if (cv.lengths) {
-        local->value = ngx_palloc(cf->pool, sizeof(ngx_nsoc_complex_value_t));
+        local->value = ngx_palloc(cf->pool, sizeof(ngx_nlnk_complex_value_t));
         if (local->value == NULL) {
             return NGX_CONF_ERROR ;
         }

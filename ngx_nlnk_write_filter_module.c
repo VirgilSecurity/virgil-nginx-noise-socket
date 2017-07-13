@@ -6,21 +6,21 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 
-#include "ngx_nsoc.h"
+#include "ngx_nlnk.h"
 
 typedef struct {
     ngx_chain_t *from_upstream;
     ngx_chain_t *from_downstream;
-} ngx_nsoc_write_filter_ctx_t;
+} ngx_nlnk_write_filter_ctx_t;
 
-static ngx_int_t ngx_nsoc_write_filter(ngx_nsoc_session_t *s,
+static ngx_int_t ngx_nlnk_write_filter(ngx_nlnk_session_t *s,
         ngx_chain_t *in, ngx_uint_t from_upstream);
-static ngx_int_t ngx_nsoc_write_filter_init(ngx_conf_t *cf);
+static ngx_int_t ngx_nlnk_write_filter_init(ngx_conf_t *cf);
 
-static ngx_nsoc_module_t ngx_nsoc_write_filter_module_ctx =
+static ngx_nlnk_module_t ngx_nlnk_write_filter_module_ctx =
 {
   NULL, /* preconfiguration */
-  ngx_nsoc_write_filter_init, /* postconfiguration */
+  ngx_nlnk_write_filter_init, /* postconfiguration */
 
   NULL, /* create main configuration */
   NULL, /* init main configuration */
@@ -29,12 +29,12 @@ static ngx_nsoc_module_t ngx_nsoc_write_filter_module_ctx =
   NULL /* merge server configuration */
 };
 
-ngx_module_t ngx_nsoc_write_filter_module =
+ngx_module_t ngx_nlnk_write_filter_module =
 {
   NGX_MODULE_V1,
-  &ngx_nsoc_write_filter_module_ctx, /* module context */
+  &ngx_nlnk_write_filter_module_ctx, /* module context */
   NULL, /* module directives */
-  NGX_NSOC_MODULE, /* module type */
+  NGX_NLNK_MODULE, /* module type */
   NULL, /* init master */
   NULL, /* init module */
   NULL, /* init process */
@@ -45,27 +45,27 @@ ngx_module_t ngx_nsoc_write_filter_module =
   NGX_MODULE_V1_PADDING
 };
 
-static ngx_int_t ngx_nsoc_write_filter(ngx_nsoc_session_t *s,
+static ngx_int_t ngx_nlnk_write_filter(ngx_nlnk_session_t *s,
         ngx_chain_t *in, ngx_uint_t from_upstream)
 {
     off_t size;
     ngx_uint_t last, flush, sync;
     ngx_chain_t *cl, *ln, **ll, **out, *chain;
     ngx_connection_t *c;
-    ngx_nsoc_write_filter_ctx_t *ctx;
+    ngx_nlnk_write_filter_ctx_t *ctx;
 
-    ctx = ngx_nsoc_get_module_ctx(
-            s, ngx_nsoc_write_filter_module);
+    ctx = ngx_nlnk_get_module_ctx(
+            s, ngx_nlnk_write_filter_module);
 
     if (ctx == NULL) {
         ctx = ngx_pcalloc(
                 s->connection->pool,
-                sizeof(ngx_nsoc_write_filter_ctx_t));
+                sizeof(ngx_nlnk_write_filter_ctx_t));
         if (ctx == NULL) {
             return NGX_ERROR;
         }
 
-        ngx_nsoc_set_ctx(s, ctx, ngx_nsoc_write_filter_module);
+        ngx_nlnk_set_ctx(s, ctx, ngx_nlnk_write_filter_module);
     }
 
     if (from_upstream) {
@@ -194,13 +194,13 @@ static ngx_int_t ngx_nsoc_write_filter(ngx_nsoc_session_t *s,
             }
 
             *out = NULL;
-            c->buffered &= ~NGX_NSOC_WRITE_BUFFERED;
+            c->buffered &= ~NGX_NLNK_WRITE_BUFFERED;
 
             return NGX_OK;
         }
 
         ngx_log_error(
-                NGX_LOG_ALERT, c->log, 0, "the nsoc output chain is empty");
+                NGX_LOG_ALERT, c->log, 0, "the nlnk output chain is empty");
 
         ngx_debug_point();
 
@@ -210,7 +210,7 @@ static ngx_int_t ngx_nsoc_write_filter(ngx_nsoc_session_t *s,
     chain = c->send_chain(c, *out, 0);
 
     ngx_log_debug1(
-            NGX_LOG_DEBUG_EVENT, c->log, 0, "nsoc write filter %p", chain);
+            NGX_LOG_DEBUG_EVENT, c->log, 0, "nlnk write filter %p", chain);
 
     if (chain == NGX_CHAIN_ERROR) {
         c->error = 1;
@@ -232,11 +232,11 @@ static ngx_int_t ngx_nsoc_write_filter(ngx_nsoc_session_t *s,
             return NGX_ERROR;
         }
 
-        c->buffered |= NGX_NSOC_WRITE_BUFFERED;
+        c->buffered |= NGX_NLNK_WRITE_BUFFERED;
         return NGX_AGAIN;
     }
 
-    c->buffered &= ~NGX_NSOC_WRITE_BUFFERED;
+    c->buffered &= ~NGX_NLNK_WRITE_BUFFERED;
 
     if (c->buffered & NGX_LOWLEVEL_BUFFERED) {
         return NGX_AGAIN;
@@ -245,9 +245,9 @@ static ngx_int_t ngx_nsoc_write_filter(ngx_nsoc_session_t *s,
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nsoc_write_filter_init(ngx_conf_t *cf)
+static ngx_int_t ngx_nlnk_write_filter_init(ngx_conf_t *cf)
 {
-    ngx_nsoc_top_filter = ngx_nsoc_write_filter;
+    ngx_nlnk_top_filter = ngx_nlnk_write_filter;
 
     return NGX_OK;
 }
