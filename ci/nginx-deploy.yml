@@ -56,5 +56,8 @@
 
     - name: "Clean artifacts"
       file:
-        path: "/opt/rpms/{{ rpm_name }}"
+        path: "/opt/rpms/{{ item }}"
         state: absent
+      with_items:
+        {{ nginx_rpm_name }}
+        {{ openssl_rpm_name }}
