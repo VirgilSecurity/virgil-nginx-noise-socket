@@ -31,7 +31,12 @@
 
     - name: "Install new version of nginx artifacts"
       yum:
-        name: "/opt/rpms/{{ rpm_name }}"
+        name: "/opt/rpms/{{ nginx_rpm_name }}"
+        state: present
+
+    - name: "Install new version of nginx artifacts"
+      yum:
+        name: "/opt/rpms/{{ openssl_rpm_name }}"
         state: present
 
     - name: "Deploy config file"

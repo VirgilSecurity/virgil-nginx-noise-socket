@@ -1,5 +1,6 @@
 nginx_version = "nginx-1.13.0"
 openssl_version = "openssl-1.1.0f"
+openssl_version_number = "1.1.0f"
 
 stage('Get nginx sources'){
     node('master'){
@@ -38,13 +39,16 @@ stage('Build'){
             sh "cd $openssl_version && ./config --prefix=/usr"
             sh "cd $openssl_version && make"
             sh "cd $openssl_version && make install"
+            sh "cd $openssl_version && export DESTDIR='openssl-artifact' && make install"
+            sh "fpm -s dir -t rpm -p ./ -m 'sk@virgilsecurity.com' --description 'OpenSSL lib & tools' \
+            --rpm-use-file-permissions \
+            -n 'virgil-openssl' -v ${openssl_version_number}.${BUILD_NUMBER} -C $openssl_version ./"
             // build nginx+noise+ssl+noiselink
             sh "cd $nginx_version && ./configure --conf-path=/etc/nginx/nginx.conf --error-log-path=/var/log/nginx/error.log --pid-path=/var/run/nginx.pid --lock-path=/var/lock/nginx.lock --http-log-path=/var/log/nginx/access.log --http-client-body-temp-path=/var/lib/nginx/body --http-proxy-temp-path=/var/lib/nginx/proxy --without-http_fastcgi_module --without-http_uwsgi_module --with-http_stub_status_module --with-http_gzip_static_module --with-http_ssl_module --with-debug --add-module=./virgil-nginx-noise-socket"
             sh "cd $nginx_version && make"
             sh "cd $nginx_version && mkdir nginx-artifact"
             sh "cd $nginx_version && export DESTDIR='nginx-artifact' && make install"
             sh "cp -r noise-c/include/noise/noise-artifact/* $nginx_version/nginx-artifact/"
-            sh "ls -l $nginx_version/nginx-artifact"
             sh "fpm -s dir -t rpm -p ./ -m 'sk@virgilsecurity.com' --description 'Virgil Security Noise Socket nginx with plugin' \
             --rpm-use-file-permissions \
             -n 'virgil-nginx-noise-socket' -v 1.0.${BUILD_NUMBER} -C $nginx_version/nginx-artifact ./"
@@ -59,7 +63,7 @@ stage('Deploy artifacts'){
             dir('ci'){
                 unstash 'nginx-rpm'
             }
-            sh "ansible-playbook -i ci/nginx-inventory ci/nginx-deploy.yml --extra-vars 'rpm_name=virgil-nginx-noise-socket-1.0.${BUILD_NUMBER}-1.x86_64.rpm'"
+            sh "ansible-playbook -i ci/nginx-inventory ci/nginx-deploy.yml --extra-vars 'nginx_rpm_name=virgil-nginx-noise-socket-1.0.${BUILD_NUMBER}-1.x86_64.rpm' 'openssl_rpm_name=virgil-openssl-${openssl_version_number}.${BUILD_NUMBER}-1.x86_64.rpm'"
             dir('ci'){
                 archiveArtifacts("*.rpm")
             }
