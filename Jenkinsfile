@@ -1,4 +1,7 @@
-nginx_version = "nginx-1.13.0"
+environment {
+    nginx_version = "nginx-1.13.0"
+}
+
 
 stage('Get nginx sources'){
     node('master'){
