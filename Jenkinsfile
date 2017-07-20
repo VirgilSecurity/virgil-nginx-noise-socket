@@ -3,6 +3,7 @@ def nginx_version = "nginx-1.13.0"
 stage('Get nginx sources'){
     node('master'){
         clearContentUnix()
+        println("wget https://nginx.org/download/$nginx_version.tar.gz")
         sh "wget https://nginx.org/download/$nginx_version.tar.gz"
         sh "tar xfz $nginx_version.tar.gz"
         sh "mkdir virgil-nginx-noise-socket"
