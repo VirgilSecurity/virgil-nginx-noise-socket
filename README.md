@@ -1,4 +1,4 @@
-# virgil-nginx-noise-link
+</b># virgil-nginx-noise-link
 Nginx module that implements Noise Socket Protocol by using Virgil Security infrastructure.
 
 ## Features ##
@@ -82,11 +82,11 @@ Context: 	server
 The `[noise]` parameter allows specifying that all connections accepted on this port should work in noise link mode. Defines that this link is used as noise responder (server). Remaining parameters are similar to the parameters described for the directive of [listen](http://nginx.org/en/docs/stream/ngx_stream_core_module.html#listen)  of the ngx_stream_core_module module.
 
 ```nginx
-Syntax: 	nsoc_buffer_size size;
-Default: 	nsoc_buffer_size 65519;
+Syntax: 	nlink_buffer_size size;
+Default: 	nlink_buffer_size 65517;
 Context: 	noise_link, server
 ```
-Specifies a size of the Noise transport message payload buffer for responder (server). Value by default is the maximum size of the payload determined in the specification [The Noise Protocol Framework](http://noiseprotocol.org/noise.html).
+Specifies a size of the preread buffer for noise responder (server).
 
 ```nginx
 Syntax: 	server_private_key_file file;
@@ -112,12 +112,12 @@ Context: 	noise_link, server
 Enables the noise link protocol for connections to a proxied server. 
 
 ```nginx
-Syntax: 	proxy_buffer_size size;
-Default: 	proxy_buffer_size 65519;
+Syntax: 	block_buffer_size size;
+Default: 	block_buffer_size 65517;
 Context: 	noise_link, server
 ```
 
-Sets the size of the buffer used for reading data from the proxied server. Also sets the size of the buffer used for reading data from the client.  Value by default is the maximum size of the payload determined in the specification [The Noise Protocol Framework](http://noiseprotocol.org/noise.html). This parameter determines the buffer size for noise initiator(client) and shall be equal to the `nsoc_buffer_size` parameter for noise responder (server).
+Sets the size of the buffer used for reading data from the proxied server. Also sets the size of the buffer used for reading data from the client.  Value by default is the maximum size of the payload determined in the specification [The Noise Protocol Framework](http://noiseprotocol.org/noise.html). This parameter determines the buffer size for noise initiator(client) and noise responder (server).
 
 ```nginx
 Syntax: 	noise_handshake_timeout time;

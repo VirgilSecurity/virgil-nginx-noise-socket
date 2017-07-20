@@ -273,7 +273,7 @@ extern ngx_uint_t ngx_nlnk_max_module;
 extern ngx_module_t ngx_nlnk_core_module;
 
 typedef ngx_int_t (*ngx_nlnk_filter_pt)(ngx_nlnk_session_t *s,
-        ngx_chain_t *chain, ngx_uint_t from_upnoisesocket);
+        ngx_chain_t *chain, ngx_uint_t from_upstream);
 
 extern ngx_nlnk_filter_pt ngx_nlnk_top_filter;
 

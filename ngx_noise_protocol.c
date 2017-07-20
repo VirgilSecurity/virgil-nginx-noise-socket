@@ -5,11 +5,8 @@
 
 #include "ngx_noise_protocol.h"
 
-static const char strProtocolName[] = "Noise_XX_25519_AESGCM_SHA256";
-static const char strPrologue[] = "Virgil";
-
 ngx_int_t ngx_noise_protocol_init_handshake(NOISE_CTX *noise_ctx,
-        noise_protocol_conn_t *noise_conn, ngx_noise_role_e noise_role)
+        noise_protocol_conn_t *noise_conn, noise_prologue_data_t *prologue_data, ngx_noise_role_e noise_role)
 {
     ngx_int_t err;
     NoiseDHState *dh;
@@ -22,8 +19,15 @@ ngx_int_t ngx_noise_protocol_init_handshake(NOISE_CTX *noise_ctx,
     if (noise_init() != NOISE_ERROR_NONE)
         return NGX_ERROR;
 
-    noise_conn->NoisePrologue = (void *) strPrologue;
-    noise_conn->NoisePrologueLen = sizeof(strPrologue) - 1;
+    noise_conn->protocol_id.cipher_id = NOISE_ID('C',(uint16_t)(prologue_data->header.cipher_id))&0xFFFF;
+    noise_conn->protocol_id.dh_id = NOISE_ID('D',(uint16_t)(prologue_data->header.dh_id))&0xFFFF;
+    noise_conn->protocol_id.hash_id = NOISE_ID('H',(uint16_t)(prologue_data->header.hash_id))&0xFFFF;
+    noise_conn->protocol_id.hybrid_id = 0;
+    noise_conn->protocol_id.pattern_id = NOISE_ID('P',(uint16_t)(prologue_data->header.pattern_id))&0xFFFF;
+    noise_conn->protocol_id.prefix_id = NOISE_PREFIX_STANDARD;
+
+    noise_conn->NoisePrologue = (void *) prologue_data;
+    noise_conn->NoisePrologueLen = sizeof(noise_prologue_data_t);
 
     if (noise_role == NGX_NLNK_CLIENT_ROLE) {
         role = NOISE_ROLE_INITIATOR;
@@ -31,8 +35,9 @@ ngx_int_t ngx_noise_protocol_init_handshake(NOISE_CTX *noise_ctx,
         role = NOISE_ROLE_RESPONDER;
     }
 
-    err = noise_handshakestate_new_by_name(
-            &noise_conn->NoiseHandshakeObj, strProtocolName, role);
+	err = noise_handshakestate_new_by_id(&noise_conn->NoiseHandshakeObj,
+			&noise_conn->protocol_id, role);
+
     if (err != NOISE_ERROR_NONE)
         return NGX_ERROR;
 

@@ -48,7 +48,7 @@ static ngx_command_t ngx_nlnk_noiseserver_commands[] =
     offsetof(ngx_nlnk_noiseserver_conf_t, client_public_key_file),
     NULL },
 
-  ngx_null_command
+	ngx_null_command
 };
 
 static ngx_nlnk_module_t ngx_nlnk_noiseserver_module_ctx =
@@ -246,7 +246,7 @@ ngx_nlnk_noiseserver_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 {
     ngx_nlnk_noiseserver_conf_t *prev = parent;
     ngx_nlnk_noiseserver_conf_t *conf = child;
-
+    ngx_nlnk_core_srv_conf_t *cscf;
     ngx_pool_cleanup_t *cln;
 
     ngx_conf_merge_msec_value(
@@ -264,8 +264,12 @@ ngx_nlnk_noiseserver_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 
     conf->noise->log = cf->log;
     conf->noise->handshake_timeout = conf->handshake_timeout;
+    memcpy( conf->noise->prologue.strPrologue,"NoiseLinkInit",13);
+    conf->noise->prologue.header_len = swapw(NGX_NLNK_1MSG_NEG_DATA_SIZE);
 
-    if (ngx_nlnk_create(conf->noise, NULL) != NGX_OK) {
+    cscf = ngx_nlnk_conf_get_module_srv_conf(cf, ngx_nlnk_core_module);
+
+    if (ngx_nlnk_create(conf->noise, cscf->nlnk_buffer_size, NULL) != NGX_OK) {
         ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
                       "noise server module merge_conf error: unable to create noise ctx");
         return NGX_CONF_ERROR ;

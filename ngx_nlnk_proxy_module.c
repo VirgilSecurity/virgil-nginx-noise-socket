@@ -71,7 +71,7 @@ static char *ngx_nlnk_proxy_bind(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
 static void ngx_nlnk_proxy_noise_init_connection(ngx_nlnk_session_t *s);
 static void ngx_nlnk_proxy_noise_handshake(ngx_connection_t *pc);
-static ngx_int_t ngx_nlnk_proxy_set_noisesocket(ngx_conf_t *cf,
+static ngx_int_t ngx_nlnk_proxy_set_noiselink(ngx_conf_t *cf,
         ngx_nlnk_proxy_srv_conf_t *pscf);
 
 /*end noise*/
@@ -107,7 +107,7 @@ static ngx_command_t ngx_nlnk_proxy_commands[] =
     offsetof(ngx_nlnk_proxy_srv_conf_t, timeout),
     NULL },
 
-  { ngx_string("proxy_buffer_size"),
+  { ngx_string("block_buffer_size"),
     NGX_NLNK_MAIN_CONF | NGX_NLNK_SRV_CONF | NGX_CONF_TAKE1,
     ngx_conf_set_size_slot,
     NGX_NLNK_SRV_CONF_OFFSET,
@@ -1451,7 +1451,7 @@ ngx_nlnk_proxy_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_str_value(
             conf->server_public_key_file, prev->server_public_key_file, "");
 
-    if (conf->noise_enable && ngx_nlnk_proxy_set_noisesocket(cf, conf) != NGX_OK) {
+    if (conf->noise_enable && ngx_nlnk_proxy_set_noiselink(cf, conf) != NGX_OK) {
         return NGX_CONF_ERROR ;
     }
 
@@ -1462,7 +1462,7 @@ ngx_nlnk_proxy_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 
 /*noise*/
 
-static ngx_int_t ngx_nlnk_proxy_set_noisesocket(ngx_conf_t *cf,
+static ngx_int_t ngx_nlnk_proxy_set_noiselink(ngx_conf_t *cf,
         ngx_nlnk_proxy_srv_conf_t *pscf)
 {
     ngx_pool_cleanup_t *cln;
@@ -1476,7 +1476,7 @@ static ngx_int_t ngx_nlnk_proxy_set_noisesocket(ngx_conf_t *cf,
 
     pscf->noise->log = cf->log;
 
-    if (ngx_nlnk_create(pscf->noise, NULL) != NGX_OK) {
+    if (ngx_nlnk_create(pscf->noise, pscf->buffer_size, NULL) != NGX_OK) {
         ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
                       "noise proxy module merge_conf error: unable to create noise ctx");
 
@@ -1534,6 +1534,13 @@ static ngx_int_t ngx_nlnk_proxy_set_noisesocket(ngx_conf_t *cf,
     private_key->nelts = 1;
     pscf->noise->ctx->private_keys = private_key;
     pscf->noise->handshake_timeout = pscf->connect_timeout;
+    memcpy( pscf->noise->prologue.strPrologue,"NoiseLinkInit",13);
+    pscf->noise->prologue.header_len = swapw(NGX_NLNK_1MSG_NEG_DATA_SIZE);
+    pscf->noise->prologue.header.version_id = NGX_NLNK_VERSION_ID;
+    pscf->noise->prologue.header.cipher_id = (uint8_t)(NOISE_CIPHER_AESGCM & 0x0F);
+    pscf->noise->prologue.header.dh_id = (uint8_t)(NOISE_DH_CURVE25519 & 0x0F);
+    pscf->noise->prologue.header.hash_id = (uint8_t)(NOISE_HASH_BLAKE2b & 0x0F);
+    pscf->noise->prologue.header.pattern_id = (uint8_t)(NOISE_PATTERN_XX & 0x0F);
 
     return NGX_OK;
 }

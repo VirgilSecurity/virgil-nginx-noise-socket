@@ -86,7 +86,7 @@ static ngx_command_t  ngx_nlnk_core_commands[] = {
       offsetof(ngx_nlnk_core_srv_conf_t, tcp_nodelay),
       NULL },
 
-    { ngx_string("nlnk_buffer_size"),
+    { ngx_string("nlink_buffer_size"),
       NGX_NLNK_MAIN_CONF|NGX_NLNK_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_size_slot,
       NGX_NLNK_SRV_CONF_OFFSET,
