@@ -1,10 +1,12 @@
+nginx_version = "nginx-1.13.0"
+
 stage('Get nginx sources'){
     node('master'){
         clearContentUnix()
-        sh "wget https://nginx.org/download/nginx-1.12.0.tar.gz"
-        sh "tar xfz nginx-1.12.0.tar.gz"
+        sh "wget https://nginx.org/download/${nginx_version}.tar.gz"
+        sh "tar xfz ${nginx_version}.tar.gz"
         sh "mkdir virgil-nginx-noise-socket"
-        dir("nginx-1.12.0/virgil-nginx-noise-socket"){
+        dir("$nginx_version/virgil-nginx-noise-socket"){
             checkout scm
         }
         stash excludes: "*.tar.gz", includes: '**', name: 'nginx-source'
@@ -28,15 +30,15 @@ stage('Build'){
             sh "cd noise-c && mkdir noise-artifact"
             sh "cd noise-c && export DESTDIR='noise-artifact' && make install"
             sh "ls -la noise-c/include/noise/noise-artifact"
-            sh "cd nginx-1.12.0 && ./configure --conf-path=/etc/nginx/nginx.conf --error-log-path=/var/log/nginx/error.log --pid-path=/var/run/nginx.pid --lock-path=/var/lock/nginx.lock --http-log-path=/var/log/nginx/access.log --http-client-body-temp-path=/var/lib/nginx/body --http-proxy-temp-path=/var/lib/nginx/proxy --without-http_fastcgi_module --without-http_uwsgi_module --with-http_stub_status_module --with-http_gzip_static_module --with-http_ssl_module --with-debug --add-module=./virgil-nginx-noise-socket"
-            sh "cd nginx-1.12.0 && make"
-            sh "cd nginx-1.12.0 && mkdir nginx-artifact"
-            sh "cd nginx-1.12.0 && export DESTDIR='nginx-artifact' && make install"
-            sh "cp -r noise-c/include/noise/noise-artifact/* nginx-1.12.0/nginx-artifact/"
-            sh "ls -l nginx-1.12.0/nginx-artifact"
+            sh "cd $nginx_version && ./configure --conf-path=/etc/nginx/nginx.conf --error-log-path=/var/log/nginx/error.log --pid-path=/var/run/nginx.pid --lock-path=/var/lock/nginx.lock --http-log-path=/var/log/nginx/access.log --http-client-body-temp-path=/var/lib/nginx/body --http-proxy-temp-path=/var/lib/nginx/proxy --without-http_fastcgi_module --without-http_uwsgi_module --with-http_stub_status_module --with-http_gzip_static_module --with-http_ssl_module --with-debug --add-module=./virgil-nginx-noise-socket"
+            sh "cd $nginx_version && make"
+            sh "cd $nginx_version && mkdir nginx-artifact"
+            sh "cd $nginx_version && export DESTDIR='nginx-artifact' && make install"
+            sh "cp -r noise-c/include/noise/noise-artifact/* $nginx_version/nginx-artifact/"
+            sh "ls -l $nginx_version/nginx-artifact"
             sh "fpm -s dir -t rpm -p ./ -m 'sk@virgilsecurity.com' --description 'Virgil Security Noise Socket nginx with plugin' \
             --rpm-use-file-permissions \
-            -n 'virgil-nginx-noise-socket' -v 1.0.${BUILD_NUMBER} -C nginx-1.12.0/nginx-artifact ./"
+            -n 'virgil-nginx-noise-socket' -v 1.0.${BUILD_NUMBER} -C $nginx_version/nginx-artifact ./"
         }
         stash includes: "*.rpm", name: "nginx-rpm"
     }
@@ -44,7 +46,7 @@ stage('Build'){
 
 stage('Deploy artifacts'){
     node('master'){
-        dir('nginx-1.12.0/virgil-nginx-noise-socket'){
+        dir("$nginx_version/virgil-nginx-noise-socket"){
             dir('ci'){
                 unstash 'nginx-rpm'
             }
