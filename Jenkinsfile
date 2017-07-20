@@ -2,7 +2,6 @@ nginx_version = "nginx-1.13.0"
 
 stage('Get nginx sources'){
     node('master'){
-        echo "wget https://nginx.org/download/${nginx_version}.tar.gz"
         clearContentUnix()
         sh "wget https://nginx.org/download/${nginx_version}.tar.gz"
         sh "tar xfz ${nginx_version}.tar.gz"
@@ -47,7 +46,7 @@ stage('Build'){
 
 stage('Deploy artifacts'){
     node('master'){
-        dir('$nginx_version/virgil-nginx-noise-socket'){
+        dir("$nginx_version/virgil-nginx-noise-socket"){
             dir('ci'){
                 unstash 'nginx-rpm'
             }
