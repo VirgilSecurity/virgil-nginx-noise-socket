@@ -35,7 +35,7 @@ stage('Build'){
             // ssl install
             sh "wget https://www.openssl.org/source/${openssl_version}.tar.gz"
             sh "tar xfz ${openssl_version}.tar.gz"
-            sh "cd $openssl_version && ./config"
+            sh "cd $openssl_version && ./config --prefix=/usr"
             sh "cd $openssl_version && make"
             sh "cd $openssl_version && make install"
             // build nginx+noise+ssl+noiselink
