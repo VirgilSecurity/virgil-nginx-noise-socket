@@ -1,11 +1,11 @@
+nginx_version = "nginx-1.13.0"
 
 stage('Get nginx sources'){
     node('master'){
-        nginx_version = "nginx-1.13.0"
-        println("wget https://nginx.org/download/$nginx_version.tar.gz")
+        echo "wget https://nginx.org/download/${nginx_version}.tar.gz"
         clearContentUnix()
-        sh "wget https://nginx.org/download/$nginx_version.tar.gz"
-        sh "tar xfz $nginx_version.tar.gz"
+        sh "wget https://nginx.org/download/${nginx_version}.tar.gz"
+        sh "tar xfz ${nginx_version}.tar.gz"
         sh "mkdir virgil-nginx-noise-socket"
         dir("$nginx_version/virgil-nginx-noise-socket"){
             checkout scm
@@ -16,7 +16,6 @@ stage('Get nginx sources'){
 
 stage('Build'){
     node("build-docker"){
-        nginx_version = "nginx-1.13.0"
         docker.image('centos:7').inside("--user root"){
             clearContentUnix()
         }
