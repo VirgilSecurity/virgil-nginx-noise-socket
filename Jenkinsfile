@@ -1,4 +1,4 @@
-def nginx_version = "nginx-1.13.0"
+nginx_version = "nginx-1.13.0"
 
 stage('Get nginx sources'){
     node('master'){
