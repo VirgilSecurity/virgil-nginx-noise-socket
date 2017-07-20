@@ -1,10 +1,7 @@
-environment {
-    nginx_version = "nginx-1.13.0"
-}
-
 
 stage('Get nginx sources'){
     node('master'){
+        nginx_version = "nginx-1.13.0"
         println("wget https://nginx.org/download/$nginx_version.tar.gz")
         clearContentUnix()
         sh "wget https://nginx.org/download/$nginx_version.tar.gz"
@@ -19,6 +16,7 @@ stage('Get nginx sources'){
 
 stage('Build'){
     node("build-docker"){
+        nginx_version = "nginx-1.13.0"
         docker.image('centos:7').inside("--user root"){
             clearContentUnix()
         }
