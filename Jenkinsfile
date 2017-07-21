@@ -39,9 +39,8 @@ stage('Build'){
             sh "cd openssl && make install"
             sh "cd openssl && export DESTDIR='openssl-artifact' && make install"
             sh "fpm -s dir -t rpm -p ./ -m 'sk@virgilsecurity.com' --description 'OpenSSL lib & tools' \
-            --prefix /usr/local/openssl \
             --rpm-use-file-permissions \
-            -n 'virgil-openssl' -v ${openssl_version_number}.${BUILD_NUMBER} -C openssl ./"
+            -n 'virgil-openssl' -v ${openssl_version_number}.${BUILD_NUMBER} -C openssl-artifact ./"
             // build nginx+noise+ssl+noiselink
             sh "cd $nginx_version && ./configure --conf-path=/etc/nginx/nginx.conf --error-log-path=/var/log/nginx/error.log --pid-path=/var/run/nginx.pid --lock-path=/var/lock/nginx.lock --http-log-path=/var/log/nginx/access.log --http-client-body-temp-path=/var/lib/nginx/body --http-proxy-temp-path=/var/lib/nginx/proxy --without-http_fastcgi_module --without-http_uwsgi_module --with-http_stub_status_module --with-http_gzip_static_module --with-http_ssl_module --with-debug --add-module=./virgil-nginx-noise-socket"
             sh "cd $nginx_version && make"
