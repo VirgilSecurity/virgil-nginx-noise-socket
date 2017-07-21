@@ -32,7 +32,7 @@ stage('Build'){
             sh "cd noise-c && mkdir noise-artifact"
             sh "cd noise-c && export DESTDIR='noise-artifact' && make install"
             sh "ls -la noise-c/include/noise/noise-artifact"
-            sh "cd $nginx_version && ./configure --conf-path=/etc/nginx/nginx.conf --error-log-path=/var/log/nginx/error.log --pid-path=/var/run/nginx.pid --lock-path=/var/lock/nginx.lock --http-log-path=/var/log/nginx/access.log --http-client-body-temp-path=/var/lib/nginx/body --http-proxy-temp-path=/var/lib/nginx/proxy --without-http_fastcgi_module --without-http_uwsgi_module --with-http_stub_status_module --with-http_gzip_static_module --with-http_ssl_module --with-debug --add-module=./virgil-nginx-noise-socket"
+            sh "cd $nginx_version && ./configure --conf-path=/etc/nginx/nginx.conf --error-log-path=/var/log/nginx/error.log --pid-path=/var/run/nginx.pid --lock-path=/var/lock/nginx.lock --http-log-path=/var/log/nginx/access.log --http-client-body-temp-path=/var/lib/nginx/body --http-proxy-temp-path=/var/lib/nginx/proxy --without-http_fastcgi_module --without-http_uwsgi_module --with-http_stub_status_module --with-http_gzip_static_module --with-http_ssl_module --with-openssl-opt=enable-tls1_3 --with-debug --add-module=./virgil-nginx-noise-socket"
             sh "cd $nginx_version && make"
             sh "cd $nginx_version && mkdir nginx-artifact"
             sh "cd $nginx_version && export DESTDIR='nginx-artifact' && make install"
