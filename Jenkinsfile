@@ -34,7 +34,7 @@ stage('Build'){
             sh "ls -la noise-c/include/noise/noise-artifact"
             // ssl install
             sh "git clone https://github.com/openssl/openssl.git"
-            sh "cd openssl && ./config --prefix=/usr"
+            sh "cd openssl && ./config --prefix=/usr --openssldir=/usr/ssl"
             sh "cd openssl && make"
             sh "cd openssl && make install"
             sh "cd openssl && mkdir openssl-artifact"
