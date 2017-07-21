@@ -37,7 +37,8 @@ stage('Build'){
             sh "cd openssl && ./config --prefix=/usr"
             sh "cd openssl && make"
             sh "cd openssl && make install"
-            sh "cd openssl && export DESTDIR='openssl-artifact' && make install"
+            sh "cd openssl && mkdir openssl-artifact"
+            sh "cd openssl && export DESTDIR='openssl/openssl-artifact' && make install"
             sh "fpm -s dir -t rpm -p ./ -m 'sk@virgilsecurity.com' --description 'OpenSSL lib & tools' \
             --rpm-use-file-permissions \
             -n 'virgil-openssl' -v ${openssl_version_number}.${BUILD_NUMBER} -C openssl/openssl-artifact ./"
