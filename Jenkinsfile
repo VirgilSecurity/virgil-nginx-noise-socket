@@ -32,6 +32,12 @@ stage('Build'){
             sh "cd noise-c && mkdir noise-artifact"
             sh "cd noise-c && export DESTDIR='noise-artifact' && make install"
             sh "ls -la noise-c/include/noise/noise-artifact"
+            // ssl install
+            sh "git clone https://github.com/openssl/openssl.git"
+            sh "cd openssl && ./config --prefix=/usr"
+            sh "cd openssl && make"
+            sh "cd openssl && make install"
+            // build nginx
             sh "cd $nginx_version && ./configure --conf-path=/etc/nginx/nginx.conf --error-log-path=/var/log/nginx/error.log --pid-path=/var/run/nginx.pid --lock-path=/var/lock/nginx.lock --http-log-path=/var/log/nginx/access.log --http-client-body-temp-path=/var/lib/nginx/body --http-proxy-temp-path=/var/lib/nginx/proxy --without-http_fastcgi_module --without-http_uwsgi_module --with-http_stub_status_module --with-http_gzip_static_module --with-http_ssl_module --with-openssl-opt=enable-tls1_3 --with-debug --add-module=./virgil-nginx-noise-socket"
             sh "cd $nginx_version && make"
             sh "cd $nginx_version && mkdir nginx-artifact"
