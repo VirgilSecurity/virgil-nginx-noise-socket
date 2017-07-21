@@ -20,7 +20,6 @@
         dest: /opt/rpms/
       with_items:
         - "{{ nginx_rpm_name }}"
-        - "{{ openssl_rpm_name }}"
 
     - name: "Stop nginx"
       service:
@@ -35,11 +34,6 @@
     - name: "Install new version of nginx artifacts"
       yum:
         name: "/opt/rpms/{{ nginx_rpm_name }}"
-        state: present
-
-    - name: "Install new version of nginx artifacts"
-      yum:
-        name: "/opt/rpms/{{ openssl_rpm_name }}"
         state: present
 
     - name: "Deploy config file"
@@ -63,4 +57,3 @@
         state: absent
       with_items:
         - "{{ nginx_rpm_name }}"
-        - "{{ openssl_rpm_name }}"
