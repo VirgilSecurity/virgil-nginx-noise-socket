@@ -38,7 +38,7 @@ stage('Build'){
             sh "cd openssl && make"
             sh "cd openssl && make install"
             sh "cd openssl && mkdir openssl-artifact"
-            sh "cd openssl && export DESTDIR='openssl/openssl-artifact' && make install"
+            sh "cd openssl && make DESTDIR='openssl/openssl-artifact' install"
             sh "ls -l openssl/openssl-artifact"
             sh "fpm -s dir -t rpm -p ./ -m 'sk@virgilsecurity.com' --description 'OpenSSL lib & tools' \
             --rpm-use-file-permissions \
