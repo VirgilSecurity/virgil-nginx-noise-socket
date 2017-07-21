@@ -1,4 +1,5 @@
 nginx_version = "nginx-1.13.0"
+openssl_version_number = "1.1.1"
 
 stage('Get nginx sources'){
     node('master'){
@@ -20,8 +21,9 @@ stage('Build'){
         }
         unstash "nginx-source"
         docker.image('centos:7').inside("--user root"){
-            sh "yum install -y gcc make pcre pcre-devel pcre2 pcre2-devel openssl-devel autoconf automake flex bison git ruby ruby-devel curl libyaml-devel rpm-build"
+            sh "yum install -y gcc make pcre pcre-devel pcre2 pcre2-devel openssl-devel autoconf automake flex bison git ruby ruby-devel curl libyaml-devel rpm-build wget"
             sh "gem install fpm"
+            // noise install
             sh "git clone https://github.com/rweather/noise-c.git"
             sh "cd noise-c && autoreconf -i"
             sh "cd noise-c && ./configure"
@@ -30,12 +32,23 @@ stage('Build'){
             sh "cd noise-c && mkdir noise-artifact"
             sh "cd noise-c && export DESTDIR='noise-artifact' && make install"
             sh "ls -la noise-c/include/noise/noise-artifact"
+            // ssl install
+            // sh "git clone https://github.com/openssl/openssl.git"
+            // sh "cd openssl && ./config --prefix=/usr --openssldir=/usr/ssl"
+            // sh "cd openssl && make"
+            // sh "cd openssl && make install"
+            // sh "cd openssl && mkdir openssl-artifact"
+            // sh "cd openssl && make DESTDIR='openssl/openssl-artifact' install"
+            // sh "ls -l openssl/openssl-artifact"
+            // sh "fpm -s dir -t rpm -p ./ -m 'sk@virgilsecurity.com' --description 'OpenSSL lib & tools' \
+            // --rpm-use-file-permissions \
+            // -n 'virgil-openssl' -v ${openssl_version_number}.${BUILD_NUMBER} -C openssl/openssl-artifact ./"
+            // build nginx+noise+ssl+noiselink
             sh "cd $nginx_version && ./configure --conf-path=/etc/nginx/nginx.conf --error-log-path=/var/log/nginx/error.log --pid-path=/var/run/nginx.pid --lock-path=/var/lock/nginx.lock --http-log-path=/var/log/nginx/access.log --http-client-body-temp-path=/var/lib/nginx/body --http-proxy-temp-path=/var/lib/nginx/proxy --without-http_fastcgi_module --without-http_uwsgi_module --with-http_stub_status_module --with-http_gzip_static_module --with-http_ssl_module --with-debug --add-module=./virgil-nginx-noise-socket"
             sh "cd $nginx_version && make"
             sh "cd $nginx_version && mkdir nginx-artifact"
             sh "cd $nginx_version && export DESTDIR='nginx-artifact' && make install"
             sh "cp -r noise-c/include/noise/noise-artifact/* $nginx_version/nginx-artifact/"
-            sh "ls -l $nginx_version/nginx-artifact"
             sh "fpm -s dir -t rpm -p ./ -m 'sk@virgilsecurity.com' --description 'Virgil Security Noise Socket nginx with plugin' \
             --rpm-use-file-permissions \
             -n 'virgil-nginx-noise-socket' -v 1.0.${BUILD_NUMBER} -C $nginx_version/nginx-artifact ./"
@@ -50,7 +63,7 @@ stage('Deploy artifacts'){
             dir('ci'){
                 unstash 'nginx-rpm'
             }
-            sh "ansible-playbook -i ci/nginx-inventory ci/nginx-deploy.yml --extra-vars 'rpm_name=virgil-nginx-noise-socket-1.0.${BUILD_NUMBER}-1.x86_64.rpm'"
+            sh "ansible-playbook -i ci/nginx-inventory ci/nginx-deploy.yml --extra-vars 'nginx_rpm_name=virgil-nginx-noise-socket-1.0.${BUILD_NUMBER}-1.x86_64.rpm openssl_rpm_name=virgil-openssl-${openssl_version_number}.${BUILD_NUMBER}-1.x86_64.rpm'"
             dir('ci'){
                 archiveArtifacts("*.rpm")
             }

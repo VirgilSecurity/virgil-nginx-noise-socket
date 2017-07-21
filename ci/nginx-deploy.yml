@@ -16,8 +16,11 @@
 
     - name: "Copy artifacts"
       copy:
-        src: "{{ rpm_name }}"
+        src: "{{ item }}"
         dest: /opt/rpms/
+      with_items:
+        - "{{ nginx_rpm_name }}"
+        - "{{ openssl_rpm_name }}"
 
     - name: "Stop nginx"
       service:
@@ -31,7 +34,12 @@
 
     - name: "Install new version of nginx artifacts"
       yum:
-        name: "/opt/rpms/{{ rpm_name }}"
+        name: "/opt/rpms/{{ nginx_rpm_name }}"
+        state: present
+
+    - name: "Install new version of nginx artifacts"
+      yum:
+        name: "/opt/rpms/{{ openssl_rpm_name }}"
         state: present
 
     - name: "Deploy config file"
@@ -51,5 +59,8 @@
 
     - name: "Clean artifacts"
       file:
-        path: "/opt/rpms/{{ rpm_name }}"
+        path: "/opt/rpms/{{ item }}"
         state: absent
+      with_items:
+        - "{{ nginx_rpm_name }}"
+        - "{{ openssl_rpm_name }}"
