@@ -22,7 +22,7 @@ stage('Build'){
             sh "gem install fpm"
             // build libsodium
             // sh "git clone https://github.com/jedisct1/libsodium.git -b stable"
-            sh "wget libsodium-1.0.13.tar.gz"
+            sh "wget https://download.libsodium.org/libsodium/releases/libsodium-1.0.13.tar.gz"
             sh "tar xzf libsodium-1.0.13.tar.gz"
             sh "cd libsodium-1.0.13 && ./configure"
             sh "cd libsodium-1.0.13 && make && make check"
