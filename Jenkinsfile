@@ -29,7 +29,7 @@ stage('Build'){
             sh "cd libsodium-1.0.13 && make install"
             sh "echo '/usr/local/lib' >> /etc/ld.so.conf.d/libsodium.conf"
             sh "cat /etc/ld.so.conf.d/libsodium.conf"
-            sh "echo $PKG_CONFIG_PATH"
+            sh 'echo $PKG_CONFIG_PATH'
             sh "ldconfig"
             // sh "ls -la libsodium"
             // sh "ls -la libsodium/src/"
