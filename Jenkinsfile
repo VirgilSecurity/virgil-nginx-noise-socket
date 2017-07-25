@@ -24,8 +24,9 @@ stage('Build'){
             sh "git clone https://github.com/jedisct1/libsodium.git -b stable"
             sh "cd libsodium && ./configure"
             sh "cd libsodium && make"
-            sh "cd libsodium && make install"
-            sh "export PATH=$PATH:/usr/local/lib"
+            sh "cp libsodium/src/libsodium/.libs/libsodium.so.18.3 && /lib/x86_64-linux-gnu/libsodium.so.18.3"
+            sh "cp libsodium/src/libsodium/.libs/libsodium.so.18 && /lib/x86_64-linux-gnu/libsodium.so.18"
+            sh "cp libsodium/src/libsodium/.libs/libsodium.a && /lib/libsodium.a"
             // build noise
             sh "git clone https://github.com/rweather/noise-c.git"
             sh "cd noise-c && autoreconf -i"
