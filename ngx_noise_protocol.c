@@ -13,8 +13,8 @@ ngx_int_t ngx_noise_protocol_init_handshake(NOISE_CTX *noise_ctx,
     size_t key_len = 0;
     ngx_int_t role;
 
-    if ((noise_role != NGX_NLNK_CLIENT_ROLE)
-            && (noise_role != NGX_NLNK_SERVER_ROLE))
+    if ((noise_role != NGX_NSOC_CLIENT_ROLE)
+            && (noise_role != NGX_NSOC_SERVER_ROLE))
         return NGX_ERROR;
     if (noise_init() != NOISE_ERROR_NONE)
         return NGX_ERROR;
@@ -29,7 +29,7 @@ ngx_int_t ngx_noise_protocol_init_handshake(NOISE_CTX *noise_ctx,
     noise_conn->NoisePrologue = (void *) prologue_data;
     noise_conn->NoisePrologueLen = sizeof(noise_prologue_data_t);
 
-    if (noise_role == NGX_NLNK_CLIENT_ROLE) {
+    if (noise_role == NGX_NSOC_CLIENT_ROLE) {
         role = NOISE_ROLE_INITIATOR;
     } else {
         role = NOISE_ROLE_RESPONDER;

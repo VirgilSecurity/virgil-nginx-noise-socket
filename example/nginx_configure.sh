@@ -19,7 +19,7 @@ make clean
  --with-http_gzip_static_module \
  --with-http_ssl_module \
  --with-debug \
- --add-module=./virgil-nginx-noise-link \
+ --add-module=./virgil-nginx-noise-socket \
 
 make
 make install

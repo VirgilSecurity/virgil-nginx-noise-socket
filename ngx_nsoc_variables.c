@@ -6,193 +6,193 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <nginx.h>
-#include "ngx_nlnk.h"
+#include "ngx_nsoc.h"
 
-static ngx_nlnk_variable_t *ngx_nlnk_add_prefix_variable(
+static ngx_nsoc_variable_t *ngx_nsoc_add_prefix_variable(
         ngx_conf_t *cf, ngx_str_t *name, ngx_uint_t flags);
 
-static ngx_int_t ngx_nlnk_variable_binary_remote_addr(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_binary_remote_addr(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data);
-static ngx_int_t ngx_nlnk_variable_remote_addr(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_remote_addr(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data);
-static ngx_int_t ngx_nlnk_variable_remote_port(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_remote_port(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data);
-static ngx_int_t ngx_nlnk_variable_proxy_protocol_addr(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_proxy_protocol_addr(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data);
-static ngx_int_t ngx_nlnk_variable_proxy_protocol_port(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_proxy_protocol_port(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data);
-static ngx_int_t ngx_nlnk_variable_server_addr(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_server_addr(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data);
-static ngx_int_t ngx_nlnk_variable_server_port(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_server_port(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data);
-static ngx_int_t ngx_nlnk_variable_bytes(ngx_nlnk_session_t *s,
-        ngx_nlnk_variable_value_t *v, uintptr_t data);
-static ngx_int_t ngx_nlnk_variable_session_time(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_bytes(ngx_nsoc_session_t *s,
+        ngx_nsoc_variable_value_t *v, uintptr_t data);
+static ngx_int_t ngx_nsoc_variable_session_time(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data);
-static ngx_int_t ngx_nlnk_variable_status(ngx_nlnk_session_t *s,
-        ngx_nlnk_variable_value_t *v, uintptr_t data);
-static ngx_int_t ngx_nlnk_variable_connection(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_status(ngx_nsoc_session_t *s,
+        ngx_nsoc_variable_value_t *v, uintptr_t data);
+static ngx_int_t ngx_nsoc_variable_connection(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data);
 
-static ngx_int_t ngx_nlnk_variable_nginx_version(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_nginx_version(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data);
-static ngx_int_t ngx_nlnk_variable_hostname(ngx_nlnk_session_t *s,
-        ngx_nlnk_variable_value_t *v, uintptr_t data);
-static ngx_int_t ngx_nlnk_variable_pid(ngx_nlnk_session_t *s,
-        ngx_nlnk_variable_value_t *v, uintptr_t data);
-static ngx_int_t ngx_nlnk_variable_msec(ngx_nlnk_session_t *s,
-        ngx_nlnk_variable_value_t *v, uintptr_t data);
-static ngx_int_t ngx_nlnk_variable_time_iso8601(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_hostname(ngx_nsoc_session_t *s,
+        ngx_nsoc_variable_value_t *v, uintptr_t data);
+static ngx_int_t ngx_nsoc_variable_pid(ngx_nsoc_session_t *s,
+        ngx_nsoc_variable_value_t *v, uintptr_t data);
+static ngx_int_t ngx_nsoc_variable_msec(ngx_nsoc_session_t *s,
+        ngx_nsoc_variable_value_t *v, uintptr_t data);
+static ngx_int_t ngx_nsoc_variable_time_iso8601(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data);
-static ngx_int_t ngx_nlnk_variable_time_local(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_time_local(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data);
-static ngx_int_t ngx_nlnk_variable_protocol(ngx_nlnk_session_t *s,
-        ngx_nlnk_variable_value_t *v, uintptr_t data);
+static ngx_int_t ngx_nsoc_variable_protocol(ngx_nsoc_session_t *s,
+        ngx_nsoc_variable_value_t *v, uintptr_t data);
 
-static ngx_nlnk_variable_t ngx_nlnk_core_variables[] =
+static ngx_nsoc_variable_t ngx_nsoc_core_variables[] =
 {
 
   { ngx_string("binary_remote_addr"),
     NULL,
-    ngx_nlnk_variable_binary_remote_addr,
+    ngx_nsoc_variable_binary_remote_addr,
     0,
     0,
     0 },
 
   { ngx_string("remote_addr"),
     NULL,
-    ngx_nlnk_variable_remote_addr,
+    ngx_nsoc_variable_remote_addr,
     0,
     0,
     0 },
 
   { ngx_string("remote_port"),
     NULL,
-    ngx_nlnk_variable_remote_port,
+    ngx_nsoc_variable_remote_port,
     0,
     0,
     0 },
 
   { ngx_string("proxy_protocol_addr"),
     NULL,
-    ngx_nlnk_variable_proxy_protocol_addr,
+    ngx_nsoc_variable_proxy_protocol_addr,
     0,
     0,
     0 },
 
   { ngx_string("proxy_protocol_port"),
     NULL,
-    ngx_nlnk_variable_proxy_protocol_port,
+    ngx_nsoc_variable_proxy_protocol_port,
     0,
     0,
     0 },
 
   { ngx_string("server_addr"),
     NULL,
-    ngx_nlnk_variable_server_addr,
+    ngx_nsoc_variable_server_addr,
     0,
     0,
     0 },
 
   { ngx_string("server_port"),
     NULL,
-    ngx_nlnk_variable_server_port,
+    ngx_nsoc_variable_server_port,
     0,
     0,
     0 },
 
   { ngx_string("bytes_sent"),
     NULL,
-    ngx_nlnk_variable_bytes,
+    ngx_nsoc_variable_bytes,
     0,
     0,
     0 },
 
   { ngx_string("bytes_received"),
     NULL,
-    ngx_nlnk_variable_bytes,
+    ngx_nsoc_variable_bytes,
     1,
     0,
     0 },
 
   { ngx_string("session_time"),
     NULL,
-    ngx_nlnk_variable_session_time,
+    ngx_nsoc_variable_session_time,
     0,
-    NGX_NLNK_VAR_NOCACHEABLE,
+    NGX_NSOC_VAR_NOCACHEABLE,
     0 },
 
   { ngx_string("status"),
     NULL,
-    ngx_nlnk_variable_status,
+    ngx_nsoc_variable_status,
     0,
-    NGX_NLNK_VAR_NOCACHEABLE,
+    NGX_NSOC_VAR_NOCACHEABLE,
     0 },
 
   { ngx_string("connection"),
     NULL,
-    ngx_nlnk_variable_connection,
+    ngx_nsoc_variable_connection,
     0,
     0,
     0 },
 
   { ngx_string("nginx_version"),
     NULL,
-    ngx_nlnk_variable_nginx_version,
+    ngx_nsoc_variable_nginx_version,
     0,
     0,
     0 },
 
   { ngx_string("hostname"),
     NULL,
-    ngx_nlnk_variable_hostname,
+    ngx_nsoc_variable_hostname,
     0,
     0,
     0 },
 
   { ngx_string("pid"),
     NULL,
-    ngx_nlnk_variable_pid,
+    ngx_nsoc_variable_pid,
     0,
     0,
     0 },
 
   { ngx_string("msec"),
     NULL,
-    ngx_nlnk_variable_msec,
+    ngx_nsoc_variable_msec,
     0,
-    NGX_NLNK_VAR_NOCACHEABLE,
+    NGX_NSOC_VAR_NOCACHEABLE,
     0 },
 
   { ngx_string("time_iso8601"),
     NULL,
-    ngx_nlnk_variable_time_iso8601,
+    ngx_nsoc_variable_time_iso8601,
     0,
-    NGX_NLNK_VAR_NOCACHEABLE,
+    NGX_NSOC_VAR_NOCACHEABLE,
     0 },
 
   { ngx_string("time_local"),
     NULL,
-    ngx_nlnk_variable_time_local,
+    ngx_nsoc_variable_time_local,
     0,
-    NGX_NLNK_VAR_NOCACHEABLE,
+    NGX_NSOC_VAR_NOCACHEABLE,
     0 },
 
   { ngx_string("protocol"),
     NULL,
-    ngx_nlnk_variable_protocol,
+    ngx_nsoc_variable_protocol,
     0,
     0,
     0 },
@@ -205,35 +205,35 @@ static ngx_nlnk_variable_t ngx_nlnk_core_variables[] =
     0 }
 };
 
-ngx_nlnk_variable_value_t ngx_nlnk_variable_null_value =
-ngx_nlnk_variable("")
+ngx_nsoc_variable_value_t ngx_nsoc_variable_null_value =
+ngx_nsoc_variable("")
 ;
-ngx_nlnk_variable_value_t ngx_nlnk_variable_true_value =
-ngx_nlnk_variable("1")
+ngx_nsoc_variable_value_t ngx_nsoc_variable_true_value =
+ngx_nsoc_variable("1")
 ;
 
-static ngx_uint_t ngx_nlnk_variable_depth = 100;
+static ngx_uint_t ngx_nsoc_variable_depth = 100;
 
-ngx_nlnk_variable_t *
-ngx_nlnk_add_variable(ngx_conf_t *cf, ngx_str_t *name, ngx_uint_t flags)
+ngx_nsoc_variable_t *
+ngx_nsoc_add_variable(ngx_conf_t *cf, ngx_str_t *name, ngx_uint_t flags)
 {
     ngx_int_t rc;
     ngx_uint_t i;
     ngx_hash_key_t *key;
-    ngx_nlnk_variable_t *v;
-    ngx_nlnk_core_main_conf_t *cmcf;
+    ngx_nsoc_variable_t *v;
+    ngx_nsoc_core_main_conf_t *cmcf;
 
     if (name->len == 0) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, "invalid variable name \"$\"");
         return NULL;
     }
 
-    if (flags & NGX_NLNK_VAR_PREFIX) {
-        return ngx_nlnk_add_prefix_variable(cf, name, flags);
+    if (flags & NGX_NSOC_VAR_PREFIX) {
+        return ngx_nsoc_add_prefix_variable(cf, name, flags);
     }
 
-    cmcf = ngx_nlnk_conf_get_module_main_conf(
-            cf, ngx_nlnk_core_module);
+    cmcf = ngx_nsoc_conf_get_module_main_conf(
+            cf, ngx_nsoc_core_module);
 
     key = cmcf->variables_keys->keys.elts;
     for (i = 0; i < cmcf->variables_keys->keys.nelts; i++) {
@@ -245,19 +245,19 @@ ngx_nlnk_add_variable(ngx_conf_t *cf, ngx_str_t *name, ngx_uint_t flags)
 
         v = key[i].value;
 
-        if (!(v->flags & NGX_NLNK_VAR_CHANGEABLE)) {
+        if (!(v->flags & NGX_NSOC_VAR_CHANGEABLE)) {
             ngx_conf_log_error(
                     NGX_LOG_EMERG, cf, 0, "the duplicate \"%V\" variable",
                     name);
             return NULL;
         }
 
-        v->flags &= flags | ~NGX_NLNK_VAR_WEAK;
+        v->flags &= flags | ~NGX_NSOC_VAR_WEAK;
 
         return v;
     }
 
-    v = ngx_palloc(cf->pool, sizeof(ngx_nlnk_variable_t));
+    v = ngx_palloc(cf->pool, sizeof(ngx_nsoc_variable_t));
     if (v == NULL) {
         return NULL;
     }
@@ -291,16 +291,16 @@ ngx_nlnk_add_variable(ngx_conf_t *cf, ngx_str_t *name, ngx_uint_t flags)
     return v;
 }
 
-static ngx_nlnk_variable_t *
-ngx_nlnk_add_prefix_variable(ngx_conf_t *cf, ngx_str_t *name,
+static ngx_nsoc_variable_t *
+ngx_nsoc_add_prefix_variable(ngx_conf_t *cf, ngx_str_t *name,
         ngx_uint_t flags)
 {
     ngx_uint_t i;
-    ngx_nlnk_variable_t *v;
-    ngx_nlnk_core_main_conf_t *cmcf;
+    ngx_nsoc_variable_t *v;
+    ngx_nsoc_core_main_conf_t *cmcf;
 
-    cmcf = ngx_nlnk_conf_get_module_main_conf(
-            cf, ngx_nlnk_core_module);
+    cmcf = ngx_nsoc_conf_get_module_main_conf(
+            cf, ngx_nsoc_core_module);
 
     v = cmcf->prefix_variables.elts;
     for (i = 0; i < cmcf->prefix_variables.nelts; i++) {
@@ -312,14 +312,14 @@ ngx_nlnk_add_prefix_variable(ngx_conf_t *cf, ngx_str_t *name,
 
         v = &v[i];
 
-        if (!(v->flags & NGX_NLNK_VAR_CHANGEABLE)) {
+        if (!(v->flags & NGX_NSOC_VAR_CHANGEABLE)) {
             ngx_conf_log_error(
                     NGX_LOG_EMERG, cf, 0, "the duplicate \"%V\" variable",
                     name);
             return NULL;
         }
 
-        v->flags &= flags | ~NGX_NLNK_VAR_WEAK;
+        v->flags &= flags | ~NGX_NSOC_VAR_WEAK;
 
         return v;
     }
@@ -346,26 +346,26 @@ ngx_nlnk_add_prefix_variable(ngx_conf_t *cf, ngx_str_t *name,
     return v;
 }
 
-ngx_int_t ngx_nlnk_get_variable_index(ngx_conf_t *cf, ngx_str_t *name)
+ngx_int_t ngx_nsoc_get_variable_index(ngx_conf_t *cf, ngx_str_t *name)
 {
     ngx_uint_t i;
-    ngx_nlnk_variable_t *v;
-    ngx_nlnk_core_main_conf_t *cmcf;
+    ngx_nsoc_variable_t *v;
+    ngx_nsoc_core_main_conf_t *cmcf;
 
     if (name->len == 0) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, "invalid variable name \"$\"");
         return NGX_ERROR;
     }
 
-    cmcf = ngx_nlnk_conf_get_module_main_conf(
-            cf, ngx_nlnk_core_module);
+    cmcf = ngx_nsoc_conf_get_module_main_conf(
+            cf, ngx_nsoc_core_module);
 
     v = cmcf->variables.elts;
 
     if (v == NULL) {
         if (ngx_array_init(
                 &cmcf->variables, cf->pool, 4,
-                sizeof(ngx_nlnk_variable_t)) != NGX_OK) {
+                sizeof(ngx_nsoc_variable_t)) != NGX_OK) {
             return NGX_ERROR;
         }
 
@@ -403,14 +403,14 @@ ngx_int_t ngx_nlnk_get_variable_index(ngx_conf_t *cf, ngx_str_t *name)
     return v->index;
 }
 
-ngx_nlnk_variable_value_t *
-ngx_nlnk_get_indexed_variable(ngx_nlnk_session_t *s,
+ngx_nsoc_variable_value_t *
+ngx_nsoc_get_indexed_variable(ngx_nsoc_session_t *s,
         ngx_uint_t index)
 {
-    ngx_nlnk_variable_t *v;
-    ngx_nlnk_core_main_conf_t *cmcf;
+    ngx_nsoc_variable_t *v;
+    ngx_nsoc_core_main_conf_t *cmcf;
 
-    cmcf = ngx_nlnk_get_module_main_conf(s, ngx_nlnk_core_module);
+    cmcf = ngx_nsoc_get_module_main_conf(s, ngx_nsoc_core_module);
 
     if (cmcf->variables.nelts <= index) {
         ngx_log_error(
@@ -425,26 +425,26 @@ ngx_nlnk_get_indexed_variable(ngx_nlnk_session_t *s,
 
     v = cmcf->variables.elts;
 
-    if (ngx_nlnk_variable_depth == 0) {
+    if (ngx_nsoc_variable_depth == 0) {
         ngx_log_error(
                 NGX_LOG_ERR, s->connection->log, 0,
                 "cycle while evaluating variable \"%V\"", &v[index].name);
         return NULL;
     }
 
-    ngx_nlnk_variable_depth--;
+    ngx_nsoc_variable_depth--;
 
     if (v[index].get_handler(s, &s->variables[index], v[index].data) == NGX_OK) {
-        ngx_nlnk_variable_depth++;
+        ngx_nsoc_variable_depth++;
 
-        if (v[index].flags & NGX_NLNK_VAR_NOCACHEABLE) {
+        if (v[index].flags & NGX_NSOC_VAR_NOCACHEABLE) {
             s->variables[index].no_cacheable = 1;
         }
 
         return &s->variables[index];
     }
 
-    ngx_nlnk_variable_depth++;
+    ngx_nsoc_variable_depth++;
 
     s->variables[index].valid = 0;
     s->variables[index].not_found = 1;
@@ -452,11 +452,11 @@ ngx_nlnk_get_indexed_variable(ngx_nlnk_session_t *s,
     return NULL;
 }
 
-ngx_nlnk_variable_value_t *
-ngx_nlnk_get_flushed_variable(ngx_nlnk_session_t *s,
+ngx_nsoc_variable_value_t *
+ngx_nsoc_get_flushed_variable(ngx_nsoc_session_t *s,
         ngx_uint_t index)
 {
-    ngx_nlnk_variable_value_t *v;
+    ngx_nsoc_variable_value_t *v;
 
     v = &s->variables[index];
 
@@ -469,51 +469,51 @@ ngx_nlnk_get_flushed_variable(ngx_nlnk_session_t *s,
         v->not_found = 0;
     }
 
-    return ngx_nlnk_get_indexed_variable(s, index);
+    return ngx_nsoc_get_indexed_variable(s, index);
 }
 
-ngx_nlnk_variable_value_t *
-ngx_nlnk_get_variable(ngx_nlnk_session_t *s, ngx_str_t *name,
+ngx_nsoc_variable_value_t *
+ngx_nsoc_get_variable(ngx_nsoc_session_t *s, ngx_str_t *name,
         ngx_uint_t key)
 {
     size_t len;
     ngx_uint_t i, n;
-    ngx_nlnk_variable_t *v;
-    ngx_nlnk_variable_value_t *vv;
-    ngx_nlnk_core_main_conf_t *cmcf;
+    ngx_nsoc_variable_t *v;
+    ngx_nsoc_variable_value_t *vv;
+    ngx_nsoc_core_main_conf_t *cmcf;
 
-    cmcf = ngx_nlnk_get_module_main_conf(s, ngx_nlnk_core_module);
+    cmcf = ngx_nsoc_get_module_main_conf(s, ngx_nsoc_core_module);
 
     v = ngx_hash_find(&cmcf->variables_hash, key, name->data, name->len);
 
     if (v) {
-        if (v->flags & NGX_NLNK_VAR_INDEXED) {
-            return ngx_nlnk_get_flushed_variable(s, v->index);
+        if (v->flags & NGX_NSOC_VAR_INDEXED) {
+            return ngx_nsoc_get_flushed_variable(s, v->index);
         }
 
-        if (ngx_nlnk_variable_depth == 0) {
+        if (ngx_nsoc_variable_depth == 0) {
             ngx_log_error(
                     NGX_LOG_ERR, s->connection->log, 0,
                     "cycle while evaluating variable \"%V\"", name);
             return NULL;
         }
 
-        ngx_nlnk_variable_depth--;
+        ngx_nsoc_variable_depth--;
 
         vv = ngx_palloc(
-                s->connection->pool, sizeof(ngx_nlnk_variable_value_t));
+                s->connection->pool, sizeof(ngx_nsoc_variable_value_t));
 
         if (vv && v->get_handler(s, vv, v->data) == NGX_OK) {
-            ngx_nlnk_variable_depth++;
+            ngx_nsoc_variable_depth++;
             return vv;
         }
 
-        ngx_nlnk_variable_depth++;
+        ngx_nsoc_variable_depth++;
         return NULL;
     }
 
     vv = ngx_palloc(
-            s->connection->pool, sizeof(ngx_nlnk_variable_value_t));
+            s->connection->pool, sizeof(ngx_nsoc_variable_value_t));
     if (vv == NULL) {
         return NULL;
     }
@@ -545,8 +545,8 @@ ngx_nlnk_get_variable(ngx_nlnk_session_t *s, ngx_str_t *name,
     return vv;
 }
 
-static ngx_int_t ngx_nlnk_variable_binary_remote_addr(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_binary_remote_addr(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data)
 {
     struct sockaddr_in *sin;
@@ -584,8 +584,8 @@ static ngx_int_t ngx_nlnk_variable_binary_remote_addr(
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nlnk_variable_remote_addr(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_remote_addr(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data)
 {
     v->len = s->connection->addr_text.len;
@@ -597,8 +597,8 @@ static ngx_int_t ngx_nlnk_variable_remote_addr(
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nlnk_variable_remote_port(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_remote_port(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data)
 {
     ngx_uint_t port;
@@ -622,8 +622,8 @@ static ngx_int_t ngx_nlnk_variable_remote_port(
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nlnk_variable_proxy_protocol_addr(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_proxy_protocol_addr(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data)
 {
     v->len = s->connection->proxy_protocol_addr.len;
@@ -635,8 +635,8 @@ static ngx_int_t ngx_nlnk_variable_proxy_protocol_addr(
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nlnk_variable_proxy_protocol_port(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_proxy_protocol_port(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data)
 {
     ngx_uint_t port;
@@ -660,8 +660,8 @@ static ngx_int_t ngx_nlnk_variable_proxy_protocol_port(
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nlnk_variable_server_addr(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_server_addr(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data)
 {
     ngx_str_t str;
@@ -690,8 +690,8 @@ static ngx_int_t ngx_nlnk_variable_server_addr(
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nlnk_variable_server_port(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_server_port(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data)
 {
     ngx_uint_t port;
@@ -719,8 +719,8 @@ static ngx_int_t ngx_nlnk_variable_server_port(
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nlnk_variable_bytes(ngx_nlnk_session_t *s,
-        ngx_nlnk_variable_value_t *v, uintptr_t data)
+static ngx_int_t ngx_nsoc_variable_bytes(ngx_nsoc_session_t *s,
+        ngx_nsoc_variable_value_t *v, uintptr_t data)
 {
     u_char *p;
 
@@ -744,8 +744,8 @@ static ngx_int_t ngx_nlnk_variable_bytes(ngx_nlnk_session_t *s,
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nlnk_variable_session_time(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_session_time(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data)
 {
     u_char *p;
@@ -772,8 +772,8 @@ static ngx_int_t ngx_nlnk_variable_session_time(
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nlnk_variable_status(ngx_nlnk_session_t *s,
-        ngx_nlnk_variable_value_t *v, uintptr_t data)
+static ngx_int_t ngx_nsoc_variable_status(ngx_nsoc_session_t *s,
+        ngx_nsoc_variable_value_t *v, uintptr_t data)
 {
     v->data = ngx_pnalloc(s->connection->pool, NGX_INT_T_LEN);
     if (v->data == NULL) {
@@ -788,8 +788,8 @@ static ngx_int_t ngx_nlnk_variable_status(ngx_nlnk_session_t *s,
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nlnk_variable_connection(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_connection(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data)
 {
     u_char *p;
@@ -808,8 +808,8 @@ static ngx_int_t ngx_nlnk_variable_connection(
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nlnk_variable_nginx_version(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_nginx_version(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data)
 {
     v->len = sizeof(NGINX_VERSION) - 1;
@@ -821,8 +821,8 @@ static ngx_int_t ngx_nlnk_variable_nginx_version(
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nlnk_variable_hostname(ngx_nlnk_session_t *s,
-        ngx_nlnk_variable_value_t *v, uintptr_t data)
+static ngx_int_t ngx_nsoc_variable_hostname(ngx_nsoc_session_t *s,
+        ngx_nsoc_variable_value_t *v, uintptr_t data)
 {
     v->len = ngx_cycle->hostname.len;
     v->valid = 1;
@@ -833,8 +833,8 @@ static ngx_int_t ngx_nlnk_variable_hostname(ngx_nlnk_session_t *s,
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nlnk_variable_pid(ngx_nlnk_session_t *s,
-        ngx_nlnk_variable_value_t *v, uintptr_t data)
+static ngx_int_t ngx_nsoc_variable_pid(ngx_nsoc_session_t *s,
+        ngx_nsoc_variable_value_t *v, uintptr_t data)
 {
     u_char *p;
 
@@ -852,8 +852,8 @@ static ngx_int_t ngx_nlnk_variable_pid(ngx_nlnk_session_t *s,
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nlnk_variable_msec(ngx_nlnk_session_t *s,
-        ngx_nlnk_variable_value_t *v, uintptr_t data)
+static ngx_int_t ngx_nsoc_variable_msec(ngx_nsoc_session_t *s,
+        ngx_nsoc_variable_value_t *v, uintptr_t data)
 {
     u_char *p;
     ngx_time_t *tp;
@@ -874,8 +874,8 @@ static ngx_int_t ngx_nlnk_variable_msec(ngx_nlnk_session_t *s,
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nlnk_variable_time_iso8601(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_time_iso8601(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data)
 {
     u_char *p;
@@ -898,8 +898,8 @@ static ngx_int_t ngx_nlnk_variable_time_iso8601(
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nlnk_variable_time_local(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_time_local(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data)
 {
     u_char *p;
@@ -920,8 +920,8 @@ static ngx_int_t ngx_nlnk_variable_time_local(
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nlnk_variable_protocol(ngx_nlnk_session_t *s,
-        ngx_nlnk_variable_value_t *v, uintptr_t data)
+static ngx_int_t ngx_nsoc_variable_protocol(ngx_nsoc_session_t *s,
+        ngx_nsoc_variable_value_t *v, uintptr_t data)
 {
     v->len = 3;
     v->valid = 1;
@@ -933,8 +933,8 @@ static ngx_int_t ngx_nlnk_variable_protocol(ngx_nlnk_session_t *s,
 }
 
 void *
-ngx_nlnk_map_find(ngx_nlnk_session_t *s,
-        ngx_nlnk_map_t *map, ngx_str_t *match)
+ngx_nsoc_map_find(ngx_nsoc_session_t *s,
+        ngx_nsoc_map_t *map, ngx_str_t *match)
 {
     void *value;
     u_char *low;
@@ -965,13 +965,13 @@ ngx_nlnk_map_find(ngx_nlnk_session_t *s,
     if (len && map->nregex) {
         ngx_int_t n;
         ngx_uint_t i;
-        ngx_nlnk_map_regex_t *reg;
+        ngx_nsoc_map_regex_t *reg;
 
         reg = map->regex;
 
         for (i = 0; i < map->nregex; i++) {
 
-            n = ngx_nlnk_regex_exec(s, reg[i].regex, match);
+            n = ngx_nsoc_regex_exec(s, reg[i].regex, match);
 
             if (n == NGX_OK) {
                 return reg[i].value;
@@ -994,25 +994,25 @@ ngx_nlnk_map_find(ngx_nlnk_session_t *s,
 
 #if (NGX_PCRE)
 
-static ngx_int_t ngx_nlnk_variable_not_found(
-        ngx_nlnk_session_t *s, ngx_nlnk_variable_value_t *v,
+static ngx_int_t ngx_nsoc_variable_not_found(
+        ngx_nsoc_session_t *s, ngx_nsoc_variable_value_t *v,
         uintptr_t data)
 {
     v->not_found = 1;
     return NGX_OK;
 }
 
-ngx_nlnk_regex_t *
-ngx_nlnk_regex_compile(ngx_conf_t *cf, ngx_regex_compile_t *rc)
+ngx_nsoc_regex_t *
+ngx_nsoc_regex_compile(ngx_conf_t *cf, ngx_regex_compile_t *rc)
 {
     u_char *p;
     size_t size;
     ngx_str_t name;
     ngx_uint_t i, n;
-    ngx_nlnk_variable_t *v;
-    ngx_nlnk_regex_t *re;
-    ngx_nlnk_regex_variable_t *rv;
-    ngx_nlnk_core_main_conf_t *cmcf;
+    ngx_nsoc_variable_t *v;
+    ngx_nsoc_regex_t *re;
+    ngx_nsoc_regex_variable_t *rv;
+    ngx_nsoc_core_main_conf_t *cmcf;
 
     rc->pool = cf->pool;
 
@@ -1021,7 +1021,7 @@ ngx_nlnk_regex_compile(ngx_conf_t *cf, ngx_regex_compile_t *rc)
         return NULL;
     }
 
-    re = ngx_pcalloc(cf->pool, sizeof(ngx_nlnk_regex_t));
+    re = ngx_pcalloc(cf->pool, sizeof(ngx_nsoc_regex_t));
     if (re == NULL) {
         return NULL;
     }
@@ -1030,8 +1030,8 @@ ngx_nlnk_regex_compile(ngx_conf_t *cf, ngx_regex_compile_t *rc)
     re->ncaptures = rc->captures;
     re->name = rc->pattern;
 
-    cmcf = ngx_nlnk_conf_get_module_main_conf(
-            cf, ngx_nlnk_core_module);
+    cmcf = ngx_nsoc_conf_get_module_main_conf(
+            cf, ngx_nsoc_core_module);
     cmcf->ncaptures = ngx_max(cmcf->ncaptures, re->ncaptures);
 
     n = (ngx_uint_t) rc->named_captures;
@@ -1040,7 +1040,7 @@ ngx_nlnk_regex_compile(ngx_conf_t *cf, ngx_regex_compile_t *rc)
         return re;
     }
 
-    rv = ngx_palloc(rc->pool, n * sizeof(ngx_nlnk_regex_variable_t));
+    rv = ngx_palloc(rc->pool, n * sizeof(ngx_nsoc_regex_variable_t));
     if (rv == NULL) {
         return NULL;
     }
@@ -1057,17 +1057,17 @@ ngx_nlnk_regex_compile(ngx_conf_t *cf, ngx_regex_compile_t *rc)
         name.data = &p[2];
         name.len = ngx_strlen(name.data);
 
-        v = ngx_nlnk_add_variable(cf, &name, NGX_NLNK_VAR_CHANGEABLE);
+        v = ngx_nsoc_add_variable(cf, &name, NGX_NSOC_VAR_CHANGEABLE);
         if (v == NULL) {
             return NULL;
         }
 
-        rv[i].index = ngx_nlnk_get_variable_index(cf, &name);
+        rv[i].index = ngx_nsoc_get_variable_index(cf, &name);
         if (rv[i].index == NGX_ERROR) {
             return NULL;
         }
 
-        v->get_handler = ngx_nlnk_variable_not_found;
+        v->get_handler = ngx_nsoc_variable_not_found;
 
         p += size;
     }
@@ -1075,15 +1075,15 @@ ngx_nlnk_regex_compile(ngx_conf_t *cf, ngx_regex_compile_t *rc)
     return re;
 }
 
-ngx_int_t ngx_nlnk_regex_exec(ngx_nlnk_session_t *s,
-        ngx_nlnk_regex_t *re, ngx_str_t *str)
+ngx_int_t ngx_nsoc_regex_exec(ngx_nsoc_session_t *s,
+        ngx_nsoc_regex_t *re, ngx_str_t *str)
 {
     ngx_int_t rc, index;
     ngx_uint_t i, n, len;
-    ngx_nlnk_variable_value_t *vv;
-    ngx_nlnk_core_main_conf_t *cmcf;
+    ngx_nsoc_variable_value_t *vv;
+    ngx_nsoc_core_main_conf_t *cmcf;
 
-    cmcf = ngx_nlnk_get_module_main_conf(s, ngx_nlnk_core_module);
+    cmcf = ngx_nsoc_get_module_main_conf(s, ngx_nsoc_core_module);
 
     if (re->ncaptures) {
         len = cmcf->ncaptures;
@@ -1127,7 +1127,7 @@ ngx_int_t ngx_nlnk_regex_exec(ngx_nlnk_session_t *s,
 
 #if (NGX_DEBUG)
         {
-            ngx_nlnk_variable_t *v;
+            ngx_nsoc_variable_t *v;
 
             v = cmcf->variables.elts;
 
@@ -1146,13 +1146,13 @@ ngx_int_t ngx_nlnk_regex_exec(ngx_nlnk_session_t *s,
 
 #endif
 
-ngx_int_t ngx_nlnk_variables_add_core_vars(ngx_conf_t *cf)
+ngx_int_t ngx_nsoc_variables_add_core_vars(ngx_conf_t *cf)
 {
-    ngx_nlnk_variable_t *cv, *v;
-    ngx_nlnk_core_main_conf_t *cmcf;
+    ngx_nsoc_variable_t *cv, *v;
+    ngx_nsoc_core_main_conf_t *cmcf;
 
-    cmcf = ngx_nlnk_conf_get_module_main_conf(
-            cf, ngx_nlnk_core_module);
+    cmcf = ngx_nsoc_conf_get_module_main_conf(
+            cf, ngx_nsoc_core_module);
 
     cmcf->variables_keys = ngx_pcalloc(
             cf->temp_pool, sizeof(ngx_hash_keys_arrays_t));
@@ -1169,12 +1169,12 @@ ngx_int_t ngx_nlnk_variables_add_core_vars(ngx_conf_t *cf)
 
     if (ngx_array_init(
             &cmcf->prefix_variables, cf->pool, 8,
-            sizeof(ngx_nlnk_variable_t)) != NGX_OK) {
+            sizeof(ngx_nsoc_variable_t)) != NGX_OK) {
         return NGX_ERROR;
     }
 
-    for (cv = ngx_nlnk_core_variables; cv->name.len; cv++) {
-        v = ngx_nlnk_add_variable(cf, &cv->name, cv->flags);
+    for (cv = ngx_nsoc_core_variables; cv->name.len; cv++) {
+        v = ngx_nsoc_add_variable(cf, &cv->name, cv->flags);
         if (v == NULL) {
             return NGX_ERROR;
         }
@@ -1185,19 +1185,19 @@ ngx_int_t ngx_nlnk_variables_add_core_vars(ngx_conf_t *cf)
     return NGX_OK;
 }
 
-ngx_int_t ngx_nlnk_variables_init_vars(ngx_conf_t *cf)
+ngx_int_t ngx_nsoc_variables_init_vars(ngx_conf_t *cf)
 {
     size_t len;
     ngx_uint_t i, n;
     ngx_hash_key_t *key;
     ngx_hash_init_t hash;
-    ngx_nlnk_variable_t *v, *av, *pv;
-    ngx_nlnk_core_main_conf_t *cmcf;
+    ngx_nsoc_variable_t *v, *av, *pv;
+    ngx_nsoc_core_main_conf_t *cmcf;
 
     /* set the handlers for the indexed stream variables */
 
-    cmcf = ngx_nlnk_conf_get_module_main_conf(
-            cf, ngx_nlnk_core_module);
+    cmcf = ngx_nsoc_conf_get_module_main_conf(
+            cf, ngx_nsoc_core_module);
 
     v = cmcf->variables.elts;
     pv = cmcf->prefix_variables.elts;
@@ -1216,13 +1216,13 @@ ngx_int_t ngx_nlnk_variables_init_vars(ngx_conf_t *cf)
                 v[i].get_handler = av->get_handler;
                 v[i].data = av->data;
 
-                av->flags |= NGX_NLNK_VAR_INDEXED;
+                av->flags |= NGX_NSOC_VAR_INDEXED;
                 v[i].flags = av->flags;
 
                 av->index = i;
 
                 if (av->get_handler == NULL
-                        || (av->flags & NGX_NLNK_VAR_WEAK)) {
+                        || (av->flags & NGX_NSOC_VAR_WEAK)) {
                     break;
                 }
 
@@ -1264,7 +1264,7 @@ ngx_int_t ngx_nlnk_variables_init_vars(ngx_conf_t *cf)
     for (n = 0; n < cmcf->variables_keys->keys.nelts; n++) {
         av = key[n].value;
 
-        if (av->flags & NGX_NLNK_VAR_NOHASH) {
+        if (av->flags & NGX_NSOC_VAR_NOHASH) {
             key[n].key.data = NULL;
         }
     }

@@ -25,9 +25,9 @@ typedef struct noise_ctx_st {
 } NOISE_CTX;
 
 typedef enum {
-    NGX_NLNK_UNSET_ROLE = -1,
-    NGX_NLNK_CLIENT_ROLE,
-    NGX_NLNK_SERVER_ROLE
+    NGX_NSOC_UNSET_ROLE = -1,
+    NGX_NSOC_CLIENT_ROLE,
+    NGX_NSOC_SERVER_ROLE
 } ngx_noise_role_e;
 
 #pragma pack(push, 1)

@@ -6,33 +6,33 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 
-#include "ngx_nlnk.h"
+#include "ngx_nsoc.h"
 
-static ngx_int_t ngx_nlnk_script_init_arrays(
-        ngx_nlnk_script_compile_t *sc);
-static ngx_int_t ngx_nlnk_script_done(
-        ngx_nlnk_script_compile_t *sc);
-static ngx_int_t ngx_nlnk_script_add_copy_code(
-        ngx_nlnk_script_compile_t *sc, ngx_str_t *value, ngx_uint_t last);
-static ngx_int_t ngx_nlnk_script_add_var_code(
-        ngx_nlnk_script_compile_t *sc, ngx_str_t *name);
+static ngx_int_t ngx_nsoc_script_init_arrays(
+        ngx_nsoc_script_compile_t *sc);
+static ngx_int_t ngx_nsoc_script_done(
+        ngx_nsoc_script_compile_t *sc);
+static ngx_int_t ngx_nsoc_script_add_copy_code(
+        ngx_nsoc_script_compile_t *sc, ngx_str_t *value, ngx_uint_t last);
+static ngx_int_t ngx_nsoc_script_add_var_code(
+        ngx_nsoc_script_compile_t *sc, ngx_str_t *name);
 #if (NGX_PCRE)
-static ngx_int_t ngx_nlnk_script_add_capture_code(
-        ngx_nlnk_script_compile_t *sc, ngx_uint_t n);
+static ngx_int_t ngx_nsoc_script_add_capture_code(
+        ngx_nsoc_script_compile_t *sc, ngx_uint_t n);
 #endif
-static ngx_int_t ngx_nlnk_script_add_full_name_code(
-        ngx_nlnk_script_compile_t *sc);
-static size_t ngx_nlnk_script_full_name_len_code(
-        ngx_nlnk_script_engine_t *e);
-static void ngx_nlnk_script_full_name_code(
-        ngx_nlnk_script_engine_t *e);
+static ngx_int_t ngx_nsoc_script_add_full_name_code(
+        ngx_nsoc_script_compile_t *sc);
+static size_t ngx_nsoc_script_full_name_len_code(
+        ngx_nsoc_script_engine_t *e);
+static void ngx_nsoc_script_full_name_code(
+        ngx_nsoc_script_engine_t *e);
 
-#define ngx_nlnk_script_exit  (u_char *) &ngx_nlnk_script_exit_code
+#define ngx_nsoc_script_exit  (u_char *) &ngx_nsoc_script_exit_code
 
-static uintptr_t ngx_nlnk_script_exit_code = (uintptr_t) NULL;
+static uintptr_t ngx_nsoc_script_exit_code = (uintptr_t) NULL;
 
-void ngx_nlnk_script_flush_complex_value(ngx_nlnk_session_t *s,
-        ngx_nlnk_complex_value_t *val)
+void ngx_nsoc_script_flush_complex_value(ngx_nsoc_session_t *s,
+        ngx_nsoc_complex_value_t *val)
 {
     ngx_uint_t *index;
 
@@ -51,22 +51,22 @@ void ngx_nlnk_script_flush_complex_value(ngx_nlnk_session_t *s,
     }
 }
 
-ngx_int_t ngx_nlnk_complex_value(ngx_nlnk_session_t *s,
-        ngx_nlnk_complex_value_t *val, ngx_str_t *value)
+ngx_int_t ngx_nsoc_complex_value(ngx_nsoc_session_t *s,
+        ngx_nsoc_complex_value_t *val, ngx_str_t *value)
 {
     size_t len;
-    ngx_nlnk_script_code_pt code;
-    ngx_nlnk_script_engine_t e;
-    ngx_nlnk_script_len_code_pt lcode;
+    ngx_nsoc_script_code_pt code;
+    ngx_nsoc_script_engine_t e;
+    ngx_nsoc_script_len_code_pt lcode;
 
     if (val->lengths == NULL) {
         *value = val->value;
         return NGX_OK;
     }
 
-    ngx_nlnk_script_flush_complex_value(s, val);
+    ngx_nsoc_script_flush_complex_value(s, val);
 
-    ngx_memzero(&e, sizeof(ngx_nlnk_script_engine_t));
+    ngx_memzero(&e, sizeof(ngx_nsoc_script_engine_t));
 
     e.ip = val->lengths;
     e.session = s;
@@ -75,7 +75,7 @@ ngx_int_t ngx_nlnk_complex_value(ngx_nlnk_session_t *s,
     len = 0;
 
     while (*(uintptr_t *) e.ip) {
-        lcode = *(ngx_nlnk_script_len_code_pt *) e.ip;
+        lcode = *(ngx_nsoc_script_len_code_pt *) e.ip;
         len += lcode(&e);
     }
 
@@ -90,8 +90,8 @@ ngx_int_t ngx_nlnk_complex_value(ngx_nlnk_session_t *s,
     e.buf = *value;
 
     while (*(uintptr_t *) e.ip) {
-        code = *(ngx_nlnk_script_code_pt *) e.ip;
-        code((ngx_nlnk_script_engine_t *) &e);
+        code = *(ngx_nsoc_script_code_pt *) e.ip;
+        code((ngx_nsoc_script_engine_t *) &e);
     }
 
     *value = e.buf;
@@ -99,13 +99,13 @@ ngx_int_t ngx_nlnk_complex_value(ngx_nlnk_session_t *s,
     return NGX_OK;
 }
 
-ngx_int_t ngx_nlnk_compile_complex_value(
-        ngx_nlnk_compile_complex_value_t *ccv)
+ngx_int_t ngx_nsoc_compile_complex_value(
+        ngx_nsoc_compile_complex_value_t *ccv)
 {
     ngx_str_t *v;
     ngx_uint_t i, n, nv, nc;
     ngx_array_t flushes, lengths, values, *pf, *pl, *pv;
-    ngx_nlnk_script_compile_t sc;
+    ngx_nsoc_script_compile_t sc;
 
     v = ccv->value;
 
@@ -149,8 +149,8 @@ ngx_int_t ngx_nlnk_compile_complex_value(
     }
 
     n = nv
-            * (2 * sizeof(ngx_nlnk_script_copy_code_t)
-                    + sizeof(ngx_nlnk_script_var_code_t))
+            * (2 * sizeof(ngx_nsoc_script_copy_code_t)
+                    + sizeof(ngx_nsoc_script_var_code_t))
             + sizeof(uintptr_t);
 
     if (ngx_array_init(&lengths, ccv->cf->pool, n, 1) != NGX_OK) {
@@ -158,8 +158,8 @@ ngx_int_t ngx_nlnk_compile_complex_value(
     }
 
     n = (nv
-            * (2 * sizeof(ngx_nlnk_script_copy_code_t)
-                    + sizeof(ngx_nlnk_script_var_code_t))
+            * (2 * sizeof(ngx_nsoc_script_copy_code_t)
+                    + sizeof(ngx_nsoc_script_var_code_t))
             + sizeof(uintptr_t) + v->len + sizeof(uintptr_t) - 1)
             & ~(sizeof(uintptr_t) - 1);
 
@@ -171,7 +171,7 @@ ngx_int_t ngx_nlnk_compile_complex_value(
     pl = &lengths;
     pv = &values;
 
-    ngx_memzero(&sc, sizeof(ngx_nlnk_script_compile_t));
+    ngx_memzero(&sc, sizeof(ngx_nsoc_script_compile_t));
 
     sc.cf = ccv->cf;
     sc.source = v;
@@ -184,7 +184,7 @@ ngx_int_t ngx_nlnk_compile_complex_value(
     sc.conf_prefix = ccv->conf_prefix;
     sc.root_prefix = ccv->root_prefix;
 
-    if (ngx_nlnk_script_compile(&sc) != NGX_OK) {
+    if (ngx_nsoc_script_compile(&sc) != NGX_OK) {
         return NGX_ERROR;
     }
 
@@ -200,42 +200,42 @@ ngx_int_t ngx_nlnk_compile_complex_value(
 }
 
 char *
-ngx_nlnk_set_complex_value_slot(ngx_conf_t *cf, ngx_command_t *cmd,
+ngx_nsoc_set_complex_value_slot(ngx_conf_t *cf, ngx_command_t *cmd,
         void *conf)
 {
     char *p = conf;
 
     ngx_str_t *value;
-    ngx_nlnk_complex_value_t **cv;
-    ngx_nlnk_compile_complex_value_t ccv;
+    ngx_nsoc_complex_value_t **cv;
+    ngx_nsoc_compile_complex_value_t ccv;
 
-    cv = (ngx_nlnk_complex_value_t **) (p + cmd->offset);
+    cv = (ngx_nsoc_complex_value_t **) (p + cmd->offset);
 
     if (*cv != NULL) {
         return "is duplicate";
     }
 
-    *cv = ngx_palloc(cf->pool, sizeof(ngx_nlnk_complex_value_t));
+    *cv = ngx_palloc(cf->pool, sizeof(ngx_nsoc_complex_value_t));
     if (*cv == NULL) {
         return NGX_CONF_ERROR ;
     }
 
     value = cf->args->elts;
 
-    ngx_memzero(&ccv, sizeof(ngx_nlnk_compile_complex_value_t));
+    ngx_memzero(&ccv, sizeof(ngx_nsoc_compile_complex_value_t));
 
     ccv.cf = cf;
     ccv.value = &value[1];
     ccv.complex_value = *cv;
 
-    if (ngx_nlnk_compile_complex_value(&ccv) != NGX_OK) {
+    if (ngx_nsoc_compile_complex_value(&ccv) != NGX_OK) {
         return NGX_CONF_ERROR ;
     }
 
     return NGX_CONF_OK;
 }
 
-ngx_uint_t ngx_nlnk_script_variables_count(ngx_str_t *value)
+ngx_uint_t ngx_nsoc_script_variables_count(ngx_str_t *value)
 {
     ngx_uint_t i, n;
 
@@ -248,13 +248,13 @@ ngx_uint_t ngx_nlnk_script_variables_count(ngx_str_t *value)
     return n;
 }
 
-ngx_int_t ngx_nlnk_script_compile(ngx_nlnk_script_compile_t *sc)
+ngx_int_t ngx_nsoc_script_compile(ngx_nsoc_script_compile_t *sc)
 {
     u_char ch;
     ngx_str_t name;
     ngx_uint_t i, bracket;
 
-    if (ngx_nlnk_script_init_arrays(sc) != NGX_OK) {
+    if (ngx_nsoc_script_init_arrays(sc) != NGX_OK) {
         return NGX_ERROR;
     }
 
@@ -274,7 +274,7 @@ ngx_int_t ngx_nlnk_script_compile(ngx_nlnk_script_compile_t *sc)
 
                 n = sc->source->data[i] - '0';
 
-                if (ngx_nlnk_script_add_capture_code(sc, n) != NGX_OK) {
+                if (ngx_nsoc_script_add_capture_code(sc, n) != NGX_OK) {
                     return NGX_ERROR;
                 }
 
@@ -334,7 +334,7 @@ ngx_int_t ngx_nlnk_script_compile(ngx_nlnk_script_compile_t *sc)
 
             sc->variables++;
 
-            if (ngx_nlnk_script_add_var_code(sc, &name) != NGX_OK) {
+            if (ngx_nsoc_script_add_var_code(sc, &name) != NGX_OK) {
                 return NGX_ERROR;
             }
 
@@ -355,13 +355,13 @@ ngx_int_t ngx_nlnk_script_compile(ngx_nlnk_script_compile_t *sc)
 
         sc->size += name.len;
 
-        if (ngx_nlnk_script_add_copy_code(
+        if (ngx_nsoc_script_add_copy_code(
                 sc, &name, (i == sc->source->len)) != NGX_OK) {
             return NGX_ERROR;
         }
     }
 
-    return ngx_nlnk_script_done(sc);
+    return ngx_nsoc_script_done(sc);
 
     invalid_variable:
 
@@ -371,16 +371,16 @@ ngx_int_t ngx_nlnk_script_compile(ngx_nlnk_script_compile_t *sc)
 }
 
 u_char *
-ngx_nlnk_script_run(ngx_nlnk_session_t *s, ngx_str_t *value,
+ngx_nsoc_script_run(ngx_nsoc_session_t *s, ngx_str_t *value,
         void *code_lengths, size_t len, void *code_values)
 {
     ngx_uint_t i;
-    ngx_nlnk_script_code_pt code;
-    ngx_nlnk_script_engine_t e;
-    ngx_nlnk_core_main_conf_t *cmcf;
-    ngx_nlnk_script_len_code_pt lcode;
+    ngx_nsoc_script_code_pt code;
+    ngx_nsoc_script_engine_t e;
+    ngx_nsoc_core_main_conf_t *cmcf;
+    ngx_nsoc_script_len_code_pt lcode;
 
-    cmcf = ngx_nlnk_get_module_main_conf(s, ngx_nlnk_core_module);
+    cmcf = ngx_nsoc_get_module_main_conf(s, ngx_nsoc_core_module);
 
     for (i = 0; i < cmcf->variables.nelts; i++) {
         if (s->variables[i].no_cacheable) {
@@ -389,14 +389,14 @@ ngx_nlnk_script_run(ngx_nlnk_session_t *s, ngx_str_t *value,
         }
     }
 
-    ngx_memzero(&e, sizeof(ngx_nlnk_script_engine_t));
+    ngx_memzero(&e, sizeof(ngx_nsoc_script_engine_t));
 
     e.ip = code_lengths;
     e.session = s;
     e.flushed = 1;
 
     while (*(uintptr_t *) e.ip) {
-        lcode = *(ngx_nlnk_script_len_code_pt *) e.ip;
+        lcode = *(ngx_nsoc_script_len_code_pt *) e.ip;
         len += lcode(&e);
     }
 
@@ -410,15 +410,15 @@ ngx_nlnk_script_run(ngx_nlnk_session_t *s, ngx_str_t *value,
     e.pos = value->data;
 
     while (*(uintptr_t *) e.ip) {
-        code = *(ngx_nlnk_script_code_pt *) e.ip;
-        code((ngx_nlnk_script_engine_t *) &e);
+        code = *(ngx_nsoc_script_code_pt *) e.ip;
+        code((ngx_nsoc_script_engine_t *) &e);
     }
 
     return e.pos;
 }
 
-void ngx_nlnk_script_flush_no_cacheable_variables(
-        ngx_nlnk_session_t *s, ngx_array_t *indices)
+void ngx_nsoc_script_flush_no_cacheable_variables(
+        ngx_nsoc_session_t *s, ngx_array_t *indices)
 {
     ngx_uint_t n, *index;
 
@@ -433,8 +433,8 @@ void ngx_nlnk_script_flush_no_cacheable_variables(
     }
 }
 
-static ngx_int_t ngx_nlnk_script_init_arrays(
-        ngx_nlnk_script_compile_t *sc)
+static ngx_int_t ngx_nsoc_script_init_arrays(
+        ngx_nsoc_script_compile_t *sc)
 {
     ngx_uint_t n;
 
@@ -448,8 +448,8 @@ static ngx_int_t ngx_nlnk_script_init_arrays(
 
     if (*sc->lengths == NULL) {
         n = sc->variables
-                * (2 * sizeof(ngx_nlnk_script_copy_code_t)
-                        + sizeof(ngx_nlnk_script_var_code_t))
+                * (2 * sizeof(ngx_nsoc_script_copy_code_t)
+                        + sizeof(ngx_nsoc_script_var_code_t))
                 + sizeof(uintptr_t);
 
         *sc->lengths = ngx_array_create(sc->cf->pool, n, 1);
@@ -460,8 +460,8 @@ static ngx_int_t ngx_nlnk_script_init_arrays(
 
     if (*sc->values == NULL) {
         n = (sc->variables
-                * (2 * sizeof(ngx_nlnk_script_copy_code_t)
-                        + sizeof(ngx_nlnk_script_var_code_t))
+                * (2 * sizeof(ngx_nsoc_script_copy_code_t)
+                        + sizeof(ngx_nsoc_script_var_code_t))
                 + sizeof(uintptr_t) + sc->source->len + sizeof(uintptr_t) - 1)
                 & ~(sizeof(uintptr_t) - 1);
 
@@ -476,8 +476,8 @@ static ngx_int_t ngx_nlnk_script_init_arrays(
     return NGX_OK;
 }
 
-static ngx_int_t ngx_nlnk_script_done(
-        ngx_nlnk_script_compile_t *sc)
+static ngx_int_t ngx_nsoc_script_done(
+        ngx_nsoc_script_compile_t *sc)
 {
     ngx_str_t zero;
     uintptr_t *code;
@@ -487,19 +487,19 @@ static ngx_int_t ngx_nlnk_script_done(
         zero.len = 1;
         zero.data = (u_char *) "\0";
 
-        if (ngx_nlnk_script_add_copy_code(sc, &zero, 0) != NGX_OK) {
+        if (ngx_nsoc_script_add_copy_code(sc, &zero, 0) != NGX_OK) {
             return NGX_ERROR;
         }
     }
 
     if (sc->conf_prefix || sc->root_prefix) {
-        if (ngx_nlnk_script_add_full_name_code(sc) != NGX_OK) {
+        if (ngx_nsoc_script_add_full_name_code(sc) != NGX_OK) {
             return NGX_ERROR;
         }
     }
 
     if (sc->complete_lengths) {
-        code = ngx_nlnk_script_add_code(*sc->lengths, sizeof(uintptr_t),
+        code = ngx_nsoc_script_add_code(*sc->lengths, sizeof(uintptr_t),
         NULL);
         if (code == NULL) {
             return NGX_ERROR;
@@ -509,7 +509,7 @@ static ngx_int_t ngx_nlnk_script_done(
     }
 
     if (sc->complete_values) {
-        code = ngx_nlnk_script_add_code(
+        code = ngx_nsoc_script_add_code(
                 *sc->values, sizeof(uintptr_t), &sc->main);
         if (code == NULL) {
             return NGX_ERROR;
@@ -522,7 +522,7 @@ static ngx_int_t ngx_nlnk_script_done(
 }
 
 void *
-ngx_nlnk_script_add_code(ngx_array_t *codes, size_t size, void *code)
+ngx_nsoc_script_add_code(ngx_array_t *codes, size_t size, void *code)
 {
     u_char *elts, **p;
     void *new;
@@ -544,40 +544,40 @@ ngx_nlnk_script_add_code(ngx_array_t *codes, size_t size, void *code)
     return new;
 }
 
-static ngx_int_t ngx_nlnk_script_add_copy_code(
-        ngx_nlnk_script_compile_t *sc, ngx_str_t *value, ngx_uint_t last)
+static ngx_int_t ngx_nsoc_script_add_copy_code(
+        ngx_nsoc_script_compile_t *sc, ngx_str_t *value, ngx_uint_t last)
 {
     u_char *p;
     size_t size, len, zero;
-    ngx_nlnk_script_copy_code_t *code;
+    ngx_nsoc_script_copy_code_t *code;
 
     zero = (sc->zero && last);
     len = value->len + zero;
 
-    code = ngx_nlnk_script_add_code(
-            *sc->lengths, sizeof(ngx_nlnk_script_copy_code_t),
+    code = ngx_nsoc_script_add_code(
+            *sc->lengths, sizeof(ngx_nsoc_script_copy_code_t),
             NULL);
     if (code == NULL) {
         return NGX_ERROR;
     }
 
     code->code =
-            (ngx_nlnk_script_code_pt) ngx_nlnk_script_copy_len_code;
+            (ngx_nsoc_script_code_pt) ngx_nsoc_script_copy_len_code;
     code->len = len;
 
-    size = (sizeof(ngx_nlnk_script_copy_code_t) + len + sizeof(uintptr_t)
+    size = (sizeof(ngx_nsoc_script_copy_code_t) + len + sizeof(uintptr_t)
             - 1) & ~(sizeof(uintptr_t) - 1);
 
-    code = ngx_nlnk_script_add_code(*sc->values, size, &sc->main);
+    code = ngx_nsoc_script_add_code(*sc->values, size, &sc->main);
     if (code == NULL) {
         return NGX_ERROR;
     }
 
-    code->code = ngx_nlnk_script_copy_code;
+    code->code = ngx_nsoc_script_copy_code;
     code->len = len;
 
     p = ngx_cpymem(
-            (u_char * ) code + sizeof(ngx_nlnk_script_copy_code_t),
+            (u_char * ) code + sizeof(ngx_nsoc_script_copy_code_t),
             value->data, value->len);
 
     if (zero) {
@@ -588,32 +588,32 @@ static ngx_int_t ngx_nlnk_script_add_copy_code(
     return NGX_OK;
 }
 
-size_t ngx_nlnk_script_copy_len_code(ngx_nlnk_script_engine_t *e)
+size_t ngx_nsoc_script_copy_len_code(ngx_nsoc_script_engine_t *e)
 {
-    ngx_nlnk_script_copy_code_t *code;
+    ngx_nsoc_script_copy_code_t *code;
 
-    code = (ngx_nlnk_script_copy_code_t *) e->ip;
+    code = (ngx_nsoc_script_copy_code_t *) e->ip;
 
-    e->ip += sizeof(ngx_nlnk_script_copy_code_t);
+    e->ip += sizeof(ngx_nsoc_script_copy_code_t);
 
     return code->len;
 }
 
-void ngx_nlnk_script_copy_code(ngx_nlnk_script_engine_t *e)
+void ngx_nsoc_script_copy_code(ngx_nsoc_script_engine_t *e)
 {
     u_char *p;
-    ngx_nlnk_script_copy_code_t *code;
+    ngx_nsoc_script_copy_code_t *code;
 
-    code = (ngx_nlnk_script_copy_code_t *) e->ip;
+    code = (ngx_nsoc_script_copy_code_t *) e->ip;
 
     p = e->pos;
 
     if (!e->skip) {
-        e->pos = ngx_copy(p, e->ip + sizeof(ngx_nlnk_script_copy_code_t),
+        e->pos = ngx_copy(p, e->ip + sizeof(ngx_nsoc_script_copy_code_t),
                 code->len);
     }
 
-    e->ip += sizeof(ngx_nlnk_script_copy_code_t)
+    e->ip += sizeof(ngx_nsoc_script_copy_code_t)
             + ((code->len + sizeof(uintptr_t) - 1) & ~(sizeof(uintptr_t) - 1));
 
     ngx_log_debug2(
@@ -621,13 +621,13 @@ void ngx_nlnk_script_copy_code(ngx_nlnk_script_engine_t *e)
             "stream script copy: \"%*s\"", e->pos - p, p);
 }
 
-static ngx_int_t ngx_nlnk_script_add_var_code(
-        ngx_nlnk_script_compile_t *sc, ngx_str_t *name)
+static ngx_int_t ngx_nsoc_script_add_var_code(
+        ngx_nsoc_script_compile_t *sc, ngx_str_t *name)
 {
     ngx_int_t index, *p;
-    ngx_nlnk_script_var_code_t *code;
+    ngx_nsoc_script_var_code_t *code;
 
-    index = ngx_nlnk_get_variable_index(sc->cf, name);
+    index = ngx_nsoc_get_variable_index(sc->cf, name);
 
     if (index == NGX_ERROR) {
         return NGX_ERROR;
@@ -642,44 +642,44 @@ static ngx_int_t ngx_nlnk_script_add_var_code(
         *p = index;
     }
 
-    code = ngx_nlnk_script_add_code(
-            *sc->lengths, sizeof(ngx_nlnk_script_var_code_t),
+    code = ngx_nsoc_script_add_code(
+            *sc->lengths, sizeof(ngx_nsoc_script_var_code_t),
             NULL);
     if (code == NULL) {
         return NGX_ERROR;
     }
 
     code->code =
-            (ngx_nlnk_script_code_pt) ngx_nlnk_script_copy_var_len_code;
+            (ngx_nsoc_script_code_pt) ngx_nsoc_script_copy_var_len_code;
     code->index = (uintptr_t) index;
 
-    code = ngx_nlnk_script_add_code(
-            *sc->values, sizeof(ngx_nlnk_script_var_code_t), &sc->main);
+    code = ngx_nsoc_script_add_code(
+            *sc->values, sizeof(ngx_nsoc_script_var_code_t), &sc->main);
     if (code == NULL) {
         return NGX_ERROR;
     }
 
-    code->code = ngx_nlnk_script_copy_var_code;
+    code->code = ngx_nsoc_script_copy_var_code;
     code->index = (uintptr_t) index;
 
     return NGX_OK;
 }
 
-size_t ngx_nlnk_script_copy_var_len_code(
-        ngx_nlnk_script_engine_t *e)
+size_t ngx_nsoc_script_copy_var_len_code(
+        ngx_nsoc_script_engine_t *e)
 {
-    ngx_nlnk_variable_value_t *value;
-    ngx_nlnk_script_var_code_t *code;
+    ngx_nsoc_variable_value_t *value;
+    ngx_nsoc_script_var_code_t *code;
 
-    code = (ngx_nlnk_script_var_code_t *) e->ip;
+    code = (ngx_nsoc_script_var_code_t *) e->ip;
 
-    e->ip += sizeof(ngx_nlnk_script_var_code_t);
+    e->ip += sizeof(ngx_nsoc_script_var_code_t);
 
     if (e->flushed) {
-        value = ngx_nlnk_get_indexed_variable(e->session, code->index);
+        value = ngx_nsoc_get_indexed_variable(e->session, code->index);
 
     } else {
-        value = ngx_nlnk_get_flushed_variable(e->session, code->index);
+        value = ngx_nsoc_get_flushed_variable(e->session, code->index);
     }
 
     if (value && !value->not_found) {
@@ -689,24 +689,24 @@ size_t ngx_nlnk_script_copy_var_len_code(
     return 0;
 }
 
-void ngx_nlnk_script_copy_var_code(ngx_nlnk_script_engine_t *e)
+void ngx_nsoc_script_copy_var_code(ngx_nsoc_script_engine_t *e)
 {
     u_char *p;
-    ngx_nlnk_variable_value_t *value;
-    ngx_nlnk_script_var_code_t *code;
+    ngx_nsoc_variable_value_t *value;
+    ngx_nsoc_script_var_code_t *code;
 
-    code = (ngx_nlnk_script_var_code_t *) e->ip;
+    code = (ngx_nsoc_script_var_code_t *) e->ip;
 
-    e->ip += sizeof(ngx_nlnk_script_var_code_t);
+    e->ip += sizeof(ngx_nsoc_script_var_code_t);
 
     if (!e->skip) {
 
         if (e->flushed) {
-            value = ngx_nlnk_get_indexed_variable(
+            value = ngx_nsoc_get_indexed_variable(
                     e->session, code->index);
 
         } else {
-            value = ngx_nlnk_get_flushed_variable(
+            value = ngx_nsoc_get_flushed_variable(
                     e->session, code->index);
         }
 
@@ -723,30 +723,30 @@ void ngx_nlnk_script_copy_var_code(ngx_nlnk_script_engine_t *e)
 
 #if (NGX_PCRE)
 
-static ngx_int_t ngx_nlnk_script_add_capture_code(
-        ngx_nlnk_script_compile_t *sc, ngx_uint_t n)
+static ngx_int_t ngx_nsoc_script_add_capture_code(
+        ngx_nsoc_script_compile_t *sc, ngx_uint_t n)
 {
-    ngx_nlnk_script_copy_capture_code_t *code;
+    ngx_nsoc_script_copy_capture_code_t *code;
 
-    code = ngx_nlnk_script_add_code(
-            *sc->lengths, sizeof(ngx_nlnk_script_copy_capture_code_t),
+    code = ngx_nsoc_script_add_code(
+            *sc->lengths, sizeof(ngx_nsoc_script_copy_capture_code_t),
             NULL);
     if (code == NULL) {
         return NGX_ERROR;
     }
 
     code->code =
-            (ngx_nlnk_script_code_pt) ngx_nlnk_script_copy_capture_len_code;
+            (ngx_nsoc_script_code_pt) ngx_nsoc_script_copy_capture_len_code;
     code->n = 2 * n;
 
-    code = ngx_nlnk_script_add_code(
-            *sc->values, sizeof(ngx_nlnk_script_copy_capture_code_t),
+    code = ngx_nsoc_script_add_code(
+            *sc->values, sizeof(ngx_nsoc_script_copy_capture_code_t),
             &sc->main);
     if (code == NULL) {
         return NGX_ERROR;
     }
 
-    code->code = ngx_nlnk_script_copy_capture_code;
+    code->code = ngx_nsoc_script_copy_capture_code;
     code->n = 2 * n;
 
     if (sc->ncaptures < n) {
@@ -756,19 +756,19 @@ static ngx_int_t ngx_nlnk_script_add_capture_code(
     return NGX_OK;
 }
 
-size_t ngx_nlnk_script_copy_capture_len_code(
-        ngx_nlnk_script_engine_t *e)
+size_t ngx_nsoc_script_copy_capture_len_code(
+        ngx_nsoc_script_engine_t *e)
 {
     int *cap;
     ngx_uint_t n;
-    ngx_nlnk_session_t *s;
-    ngx_nlnk_script_copy_capture_code_t *code;
+    ngx_nsoc_session_t *s;
+    ngx_nsoc_script_copy_capture_code_t *code;
 
     s = e->session;
 
-    code = (ngx_nlnk_script_copy_capture_code_t *) e->ip;
+    code = (ngx_nsoc_script_copy_capture_code_t *) e->ip;
 
-    e->ip += sizeof(ngx_nlnk_script_copy_capture_code_t);
+    e->ip += sizeof(ngx_nsoc_script_copy_capture_code_t);
 
     n = code->n;
 
@@ -780,20 +780,20 @@ size_t ngx_nlnk_script_copy_capture_len_code(
     return 0;
 }
 
-void ngx_nlnk_script_copy_capture_code(
-        ngx_nlnk_script_engine_t *e)
+void ngx_nsoc_script_copy_capture_code(
+        ngx_nsoc_script_engine_t *e)
 {
     int *cap;
     u_char *p, *pos;
     ngx_uint_t n;
-    ngx_nlnk_session_t *s;
-    ngx_nlnk_script_copy_capture_code_t *code;
+    ngx_nsoc_session_t *s;
+    ngx_nsoc_script_copy_capture_code_t *code;
 
     s = e->session;
 
-    code = (ngx_nlnk_script_copy_capture_code_t *) e->ip;
+    code = (ngx_nsoc_script_copy_capture_code_t *) e->ip;
 
-    e->ip += sizeof(ngx_nlnk_script_copy_capture_code_t);
+    e->ip += sizeof(ngx_nsoc_script_copy_capture_code_t);
 
     n = code->n;
 
@@ -812,56 +812,56 @@ void ngx_nlnk_script_copy_capture_code(
 
 #endif
 
-static ngx_int_t ngx_nlnk_script_add_full_name_code(
-        ngx_nlnk_script_compile_t *sc)
+static ngx_int_t ngx_nsoc_script_add_full_name_code(
+        ngx_nsoc_script_compile_t *sc)
 {
-    ngx_nlnk_script_full_name_code_t *code;
+    ngx_nsoc_script_full_name_code_t *code;
 
-    code = ngx_nlnk_script_add_code(
-            *sc->lengths, sizeof(ngx_nlnk_script_full_name_code_t),
+    code = ngx_nsoc_script_add_code(
+            *sc->lengths, sizeof(ngx_nsoc_script_full_name_code_t),
             NULL);
     if (code == NULL) {
         return NGX_ERROR;
     }
 
     code->code =
-            (ngx_nlnk_script_code_pt) ngx_nlnk_script_full_name_len_code;
+            (ngx_nsoc_script_code_pt) ngx_nsoc_script_full_name_len_code;
     code->conf_prefix = sc->conf_prefix;
 
-    code = ngx_nlnk_script_add_code(
-            *sc->values, sizeof(ngx_nlnk_script_full_name_code_t),
+    code = ngx_nsoc_script_add_code(
+            *sc->values, sizeof(ngx_nsoc_script_full_name_code_t),
             &sc->main);
     if (code == NULL) {
         return NGX_ERROR;
     }
 
-    code->code = ngx_nlnk_script_full_name_code;
+    code->code = ngx_nsoc_script_full_name_code;
     code->conf_prefix = sc->conf_prefix;
 
     return NGX_OK;
 }
 
-static size_t ngx_nlnk_script_full_name_len_code(
-        ngx_nlnk_script_engine_t *e)
+static size_t ngx_nsoc_script_full_name_len_code(
+        ngx_nsoc_script_engine_t *e)
 {
-    ngx_nlnk_script_full_name_code_t *code;
+    ngx_nsoc_script_full_name_code_t *code;
 
-    code = (ngx_nlnk_script_full_name_code_t *) e->ip;
+    code = (ngx_nsoc_script_full_name_code_t *) e->ip;
 
-    e->ip += sizeof(ngx_nlnk_script_full_name_code_t);
+    e->ip += sizeof(ngx_nsoc_script_full_name_code_t);
 
     return code->conf_prefix ?
             ngx_cycle->conf_prefix.len : ngx_cycle->prefix.len;
 }
 
-static void ngx_nlnk_script_full_name_code(
-        ngx_nlnk_script_engine_t *e)
+static void ngx_nsoc_script_full_name_code(
+        ngx_nsoc_script_engine_t *e)
 {
-    ngx_nlnk_script_full_name_code_t *code;
+    ngx_nsoc_script_full_name_code_t *code;
 
     ngx_str_t value, *prefix;
 
-    code = (ngx_nlnk_script_full_name_code_t *) e->ip;
+    code = (ngx_nsoc_script_full_name_code_t *) e->ip;
 
     value.data = e->buf.data;
     value.len = e->pos - e->buf.data;
@@ -873,7 +873,7 @@ static void ngx_nlnk_script_full_name_code(
 
     if (ngx_get_full_name(
             e->session->connection->pool, prefix, &value) != NGX_OK) {
-        e->ip = ngx_nlnk_script_exit;
+        e->ip = ngx_nsoc_script_exit;
         return;
     }
 
@@ -883,5 +883,5 @@ static void ngx_nlnk_script_full_name_code(
             NGX_LOG_DEBUG_STREAM, e->session->connection->log, 0,
             "stream script fullname: \"%V\"", &value);
 
-    e->ip += sizeof(ngx_nlnk_script_full_name_code_t);
+    e->ip += sizeof(ngx_nsoc_script_full_name_code_t);
 }

@@ -8,119 +8,119 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 
-#include "ngx_nlnk.h"
+#include "ngx_nsoc.h"
 
 
-static ngx_int_t ngx_nlnk_core_preconfiguration(ngx_conf_t *cf);
-static void *ngx_nlnk_core_create_main_conf(ngx_conf_t *cf);
-static char *ngx_nlnk_core_init_main_conf(ngx_conf_t *cf, void *conf);
-static void *ngx_nlnk_core_create_srv_conf(ngx_conf_t *cf);
-static char *ngx_nlnk_core_merge_srv_conf(ngx_conf_t *cf, void *parent,
+static ngx_int_t ngx_nsoc_core_preconfiguration(ngx_conf_t *cf);
+static void *ngx_nsoc_core_create_main_conf(ngx_conf_t *cf);
+static char *ngx_nsoc_core_init_main_conf(ngx_conf_t *cf, void *conf);
+static void *ngx_nsoc_core_create_srv_conf(ngx_conf_t *cf);
+static char *ngx_nsoc_core_merge_srv_conf(ngx_conf_t *cf, void *parent,
     void *child);
-static char *ngx_nlnk_core_error_log(ngx_conf_t *cf, ngx_command_t *cmd,
+static char *ngx_nsoc_core_error_log(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
-static char *ngx_nlnk_core_server(ngx_conf_t *cf, ngx_command_t *cmd,
+static char *ngx_nsoc_core_server(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
-static char *ngx_nlnk_core_listen(ngx_conf_t *cf, ngx_command_t *cmd,
+static char *ngx_nsoc_core_listen(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
-static char *ngx_nlnk_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd,
+static char *ngx_nsoc_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 
 
-static ngx_command_t  ngx_nlnk_core_commands[] = {
+static ngx_command_t  ngx_nsoc_core_commands[] = {
 
     { ngx_string("variables_hash_max_size"),
-      NGX_NLNK_MAIN_CONF|NGX_CONF_TAKE1,
+      NGX_NSOC_MAIN_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_num_slot,
-      NGX_NLNK_MAIN_CONF_OFFSET,
-      offsetof(ngx_nlnk_core_main_conf_t, variables_hash_max_size),
+      NGX_NSOC_MAIN_CONF_OFFSET,
+      offsetof(ngx_nsoc_core_main_conf_t, variables_hash_max_size),
       NULL },
 
     { ngx_string("variables_hash_bucket_size"),
-      NGX_NLNK_MAIN_CONF|NGX_CONF_TAKE1,
+      NGX_NSOC_MAIN_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_num_slot,
-      NGX_NLNK_MAIN_CONF_OFFSET,
-      offsetof(ngx_nlnk_core_main_conf_t, variables_hash_bucket_size),
+      NGX_NSOC_MAIN_CONF_OFFSET,
+      offsetof(ngx_nsoc_core_main_conf_t, variables_hash_bucket_size),
       NULL },
 
     { ngx_string("server"),
-      NGX_NLNK_MAIN_CONF|NGX_CONF_BLOCK|NGX_CONF_NOARGS,
-      ngx_nlnk_core_server,
+      NGX_NSOC_MAIN_CONF|NGX_CONF_BLOCK|NGX_CONF_NOARGS,
+      ngx_nsoc_core_server,
       0,
       0,
       NULL },
 
     { ngx_string("listen"),
-      NGX_NLNK_SRV_CONF|NGX_CONF_1MORE,
-      ngx_nlnk_core_listen,
-      NGX_NLNK_SRV_CONF_OFFSET,
+      NGX_NSOC_SRV_CONF|NGX_CONF_1MORE,
+      ngx_nsoc_core_listen,
+      NGX_NSOC_SRV_CONF_OFFSET,
       0,
       NULL },
 
     { ngx_string("error_log"),
-      NGX_NLNK_MAIN_CONF|NGX_NLNK_SRV_CONF|NGX_CONF_1MORE,
-      ngx_nlnk_core_error_log,
-      NGX_NLNK_SRV_CONF_OFFSET,
+      NGX_NSOC_MAIN_CONF|NGX_NSOC_SRV_CONF|NGX_CONF_1MORE,
+      ngx_nsoc_core_error_log,
+      NGX_NSOC_SRV_CONF_OFFSET,
       0,
       NULL },
 
     { ngx_string("resolver"),
-      NGX_NLNK_MAIN_CONF|NGX_NLNK_SRV_CONF|NGX_CONF_1MORE,
-      ngx_nlnk_core_resolver,
-      NGX_NLNK_SRV_CONF_OFFSET,
+      NGX_NSOC_MAIN_CONF|NGX_NSOC_SRV_CONF|NGX_CONF_1MORE,
+      ngx_nsoc_core_resolver,
+      NGX_NSOC_SRV_CONF_OFFSET,
       0,
       NULL },
 
     { ngx_string("resolver_timeout"),
-      NGX_NLNK_MAIN_CONF|NGX_NLNK_SRV_CONF|NGX_CONF_TAKE1,
+      NGX_NSOC_MAIN_CONF|NGX_NSOC_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_msec_slot,
-      NGX_NLNK_SRV_CONF_OFFSET,
-      offsetof(ngx_nlnk_core_srv_conf_t, resolver_timeout),
+      NGX_NSOC_SRV_CONF_OFFSET,
+      offsetof(ngx_nsoc_core_srv_conf_t, resolver_timeout),
       NULL },
 
 
     { ngx_string("tcp_nodelay"),
-      NGX_NLNK_MAIN_CONF|NGX_NLNK_SRV_CONF|NGX_CONF_FLAG,
+      NGX_NSOC_MAIN_CONF|NGX_NSOC_SRV_CONF|NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
-      NGX_NLNK_SRV_CONF_OFFSET,
-      offsetof(ngx_nlnk_core_srv_conf_t, tcp_nodelay),
+      NGX_NSOC_SRV_CONF_OFFSET,
+      offsetof(ngx_nsoc_core_srv_conf_t, tcp_nodelay),
       NULL },
 
-    { ngx_string("nlink_buffer_size"),
-      NGX_NLNK_MAIN_CONF|NGX_NLNK_SRV_CONF|NGX_CONF_TAKE1,
+    { ngx_string("preread_buffer_size"),
+      NGX_NSOC_MAIN_CONF|NGX_NSOC_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_size_slot,
-      NGX_NLNK_SRV_CONF_OFFSET,
-      offsetof(ngx_nlnk_core_srv_conf_t,nlnk_buffer_size ),
+      NGX_NSOC_SRV_CONF_OFFSET,
+      offsetof(ngx_nsoc_core_srv_conf_t,nsoc_preread_buffer_size ),
       NULL },
 
     { ngx_string("preread_timeout"),
-      NGX_NLNK_MAIN_CONF|NGX_NLNK_SRV_CONF|NGX_CONF_TAKE1,
+      NGX_NSOC_MAIN_CONF|NGX_NSOC_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_msec_slot,
-      NGX_NLNK_SRV_CONF_OFFSET,
-      offsetof(ngx_nlnk_core_srv_conf_t, preread_timeout),
+      NGX_NSOC_SRV_CONF_OFFSET,
+      offsetof(ngx_nsoc_core_srv_conf_t, preread_timeout),
       NULL },
 
       ngx_null_command
 };
 
 
-static ngx_nlnk_module_t  ngx_nlnk_core_module_ctx = {
-    ngx_nlnk_core_preconfiguration,      /* preconfiguration */
+static ngx_nsoc_module_t  ngx_nsoc_core_module_ctx = {
+    ngx_nsoc_core_preconfiguration,      /* preconfiguration */
     NULL,                                  /* postconfiguration */
 
-    ngx_nlnk_core_create_main_conf,      /* create main configuration */
-    ngx_nlnk_core_init_main_conf,        /* init main configuration */
+    ngx_nsoc_core_create_main_conf,      /* create main configuration */
+    ngx_nsoc_core_init_main_conf,        /* init main configuration */
 
-    ngx_nlnk_core_create_srv_conf,       /* create server configuration */
-    ngx_nlnk_core_merge_srv_conf         /* merge server configuration */
+    ngx_nsoc_core_create_srv_conf,       /* create server configuration */
+    ngx_nsoc_core_merge_srv_conf         /* merge server configuration */
 };
 
 
-ngx_module_t  ngx_nlnk_core_module = {
+ngx_module_t  ngx_nsoc_core_module = {
     NGX_MODULE_V1,
-    &ngx_nlnk_core_module_ctx,           /* module context */
-    ngx_nlnk_core_commands,              /* module directives */
-    NGX_NLNK_MODULE,                     /* module type */
+    &ngx_nsoc_core_module_ctx,           /* module context */
+    ngx_nsoc_core_commands,              /* module directives */
+    NGX_NSOC_MODULE,                     /* module type */
     NULL,                                  /* init master */
     NULL,                                  /* init module */
     NULL,                                  /* init process */
@@ -133,13 +133,13 @@ ngx_module_t  ngx_nlnk_core_module = {
 
 
 void
-ngx_nlnk_core_run_phases(ngx_nlnk_session_t *s)
+ngx_nsoc_core_run_phases(ngx_nsoc_session_t *s)
 {
     ngx_int_t                     rc;
-    ngx_nlnk_phase_handler_t   *ph;
-    ngx_nlnk_core_main_conf_t  *cmcf;
+    ngx_nsoc_phase_handler_t   *ph;
+    ngx_nsoc_core_main_conf_t  *cmcf;
 
-    cmcf = ngx_nlnk_get_module_main_conf(s, ngx_nlnk_core_module);
+    cmcf = ngx_nsoc_get_module_main_conf(s, ngx_nsoc_core_module);
 
     ph = cmcf->phase_engine.handlers;
 
@@ -155,8 +155,8 @@ ngx_nlnk_core_run_phases(ngx_nlnk_session_t *s)
 
 
 ngx_int_t
-ngx_nlnk_core_generic_phase(ngx_nlnk_session_t *s,
-    ngx_nlnk_phase_handler_t *ph)
+ngx_nsoc_core_generic_phase(ngx_nsoc_session_t *s,
+    ngx_nsoc_phase_handler_t *ph)
 {
     ngx_int_t  rc;
 
@@ -185,33 +185,33 @@ ngx_nlnk_core_generic_phase(ngx_nlnk_session_t *s,
     }
 
     if (rc == NGX_ERROR) {
-        rc = NGX_NLNK_INTERNAL_SERVER_ERROR;
+        rc = NGX_NSOC_INTERNAL_SERVER_ERROR;
     }
 
-    ngx_nlnk_finalize_session(s, rc);
+    ngx_nsoc_finalize_session(s, rc);
 
     return NGX_OK;
 }
 
 
 ngx_int_t
-ngx_nlnk_core_preread_phase(ngx_nlnk_session_t *s,
-    ngx_nlnk_phase_handler_t *ph)
+ngx_nsoc_core_preread_phase(ngx_nsoc_session_t *s,
+    ngx_nsoc_phase_handler_t *ph)
 {
     size_t                       size;
     ssize_t                      n;
     ngx_int_t                    rc;
     ngx_connection_t            *c;
-    ngx_nlnk_core_srv_conf_t  *cscf;
+    ngx_nsoc_core_srv_conf_t  *cscf;
 
     c = s->connection;
 
     c->log->action = "prereading client data";
 
-    cscf = ngx_nlnk_get_module_srv_conf(s, ngx_nlnk_core_module);
+    cscf = ngx_nsoc_get_module_srv_conf(s, ngx_nsoc_core_module);
 
     if (c->read->timedout) {
-        rc = NGX_NLNK_OK;
+        rc = NGX_NSOC_OK;
 
     } else if (c->read->timer_set) {
         rc = NGX_AGAIN;
@@ -223,7 +223,7 @@ ngx_nlnk_core_preread_phase(ngx_nlnk_session_t *s,
     while (rc == NGX_AGAIN) {
 
         if (c->buffer == NULL) {
-            c->buffer = ngx_create_temp_buf(c->pool, cscf->nlnk_buffer_size);
+            c->buffer = ngx_create_temp_buf(c->pool, cscf->nsoc_preread_buffer_size);
             if (c->buffer == NULL) {
                 rc = NGX_ERROR;
                 break;
@@ -234,12 +234,12 @@ ngx_nlnk_core_preread_phase(ngx_nlnk_session_t *s,
 
         if (size == 0) {
             ngx_log_error(NGX_LOG_ERR, c->log, 0, "preread buffer full");
-            rc = NGX_NLNK_BAD_REQUEST;
+            rc = NGX_NSOC_BAD_REQUEST;
             break;
         }
 
         if (c->read->eof) {
-            rc = NGX_NLNK_OK;
+            rc = NGX_NSOC_OK;
             break;
         }
 
@@ -253,7 +253,7 @@ ngx_nlnk_core_preread_phase(ngx_nlnk_session_t *s,
                 ngx_add_timer(c->read, cscf->preread_timeout);
             }
 
-            c->read->handler = ngx_nlnk_session_handler;
+            c->read->handler = ngx_nsoc_session_handler;
 
             return NGX_OK;
         }
@@ -261,7 +261,7 @@ ngx_nlnk_core_preread_phase(ngx_nlnk_session_t *s,
         n = c->recv(c, c->buffer->last, size);
 
         if (n == NGX_ERROR) {
-            rc = NGX_NLNK_OK;
+            rc = NGX_NSOC_OK;
             break;
         }
 
@@ -291,28 +291,28 @@ ngx_nlnk_core_preread_phase(ngx_nlnk_session_t *s,
     }
 
     if (rc == NGX_ERROR) {
-        rc = NGX_NLNK_INTERNAL_SERVER_ERROR;
+        rc = NGX_NSOC_INTERNAL_SERVER_ERROR;
     }
 
-    ngx_nlnk_finalize_session(s, rc);
+    ngx_nsoc_finalize_session(s, rc);
 
     return NGX_OK;
 }
 
 
 ngx_int_t
-ngx_nlnk_core_content_phase(ngx_nlnk_session_t *s,
-    ngx_nlnk_phase_handler_t *ph)
+ngx_nsoc_core_content_phase(ngx_nsoc_session_t *s,
+    ngx_nsoc_phase_handler_t *ph)
 {
     int                          tcp_nodelay;
     ngx_connection_t            *c;
-    ngx_nlnk_core_srv_conf_t  *cscf;
+    ngx_nsoc_core_srv_conf_t  *cscf;
 
     c = s->connection;
 
     c->log->action = NULL;
 
-    cscf = ngx_nlnk_get_module_srv_conf(s, ngx_nlnk_core_module);
+    cscf = ngx_nsoc_get_module_srv_conf(s, ngx_nsoc_core_module);
 
     if (c->type == SOCK_STREAM
         && cscf->tcp_nodelay
@@ -327,7 +327,7 @@ ngx_nlnk_core_content_phase(ngx_nlnk_session_t *s,
         {
             ngx_connection_error(c, ngx_socket_errno,
                                  "setsockopt(TCP_NODELAY) failed");
-            ngx_nlnk_finalize_session(s, NGX_NLNK_INTERNAL_SERVER_ERROR);
+            ngx_nsoc_finalize_session(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
             return NGX_OK;
         }
 
@@ -341,30 +341,30 @@ ngx_nlnk_core_content_phase(ngx_nlnk_session_t *s,
 
 
 static ngx_int_t
-ngx_nlnk_core_preconfiguration(ngx_conf_t *cf)
+ngx_nsoc_core_preconfiguration(ngx_conf_t *cf)
 {
-    return ngx_nlnk_variables_add_core_vars(cf);
+    return ngx_nsoc_variables_add_core_vars(cf);
 }
 
 
 static void *
-ngx_nlnk_core_create_main_conf(ngx_conf_t *cf)
+ngx_nsoc_core_create_main_conf(ngx_conf_t *cf)
 {
-    ngx_nlnk_core_main_conf_t  *cmcf;
+    ngx_nsoc_core_main_conf_t  *cmcf;
 
-    cmcf = ngx_pcalloc(cf->pool, sizeof(ngx_nlnk_core_main_conf_t));
+    cmcf = ngx_pcalloc(cf->pool, sizeof(ngx_nsoc_core_main_conf_t));
     if (cmcf == NULL) {
         return NULL;
     }
 
     if (ngx_array_init(&cmcf->servers, cf->pool, 4,
-                       sizeof(ngx_nlnk_core_srv_conf_t *))
+                       sizeof(ngx_nsoc_core_srv_conf_t *))
         != NGX_OK)
     {
         return NULL;
     }
 
-    if (ngx_array_init(&cmcf->listen, cf->pool, 4, sizeof(ngx_nlnk_listen_t))
+    if (ngx_array_init(&cmcf->listen, cf->pool, 4, sizeof(ngx_nsoc_listen_t))
         != NGX_OK)
     {
         return NULL;
@@ -378,9 +378,9 @@ ngx_nlnk_core_create_main_conf(ngx_conf_t *cf)
 
 
 static char *
-ngx_nlnk_core_init_main_conf(ngx_conf_t *cf, void *conf)
+ngx_nsoc_core_init_main_conf(ngx_conf_t *cf, void *conf)
 {
-    ngx_nlnk_core_main_conf_t *cmcf = conf;
+    ngx_nsoc_core_main_conf_t *cmcf = conf;
 
     ngx_conf_init_uint_value(cmcf->variables_hash_max_size, 1024);
     ngx_conf_init_uint_value(cmcf->variables_hash_bucket_size, 64);
@@ -397,11 +397,11 @@ ngx_nlnk_core_init_main_conf(ngx_conf_t *cf, void *conf)
 
 
 static void *
-ngx_nlnk_core_create_srv_conf(ngx_conf_t *cf)
+ngx_nsoc_core_create_srv_conf(ngx_conf_t *cf)
 {
-    ngx_nlnk_core_srv_conf_t  *cscf;
+    ngx_nsoc_core_srv_conf_t  *cscf;
 
-    cscf = ngx_pcalloc(cf->pool, sizeof(ngx_nlnk_core_srv_conf_t));
+    cscf = ngx_pcalloc(cf->pool, sizeof(ngx_nsoc_core_srv_conf_t));
     if (cscf == NULL) {
         return NULL;
     }
@@ -417,7 +417,7 @@ ngx_nlnk_core_create_srv_conf(ngx_conf_t *cf)
     cscf->line = cf->conf_file->line;
     cscf->resolver_timeout = NGX_CONF_UNSET_MSEC;
     cscf->tcp_nodelay = NGX_CONF_UNSET;
-    cscf->nlnk_buffer_size = NGX_CONF_UNSET_SIZE;
+    cscf->nsoc_preread_buffer_size = NGX_CONF_UNSET_SIZE;
     cscf->preread_timeout = NGX_CONF_UNSET_MSEC;
 
     return cscf;
@@ -425,10 +425,10 @@ ngx_nlnk_core_create_srv_conf(ngx_conf_t *cf)
 
 
 static char *
-ngx_nlnk_core_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
+ngx_nsoc_core_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 {
-    ngx_nlnk_core_srv_conf_t *prev = parent;
-    ngx_nlnk_core_srv_conf_t *conf = child;
+    ngx_nsoc_core_srv_conf_t *prev = parent;
+    ngx_nsoc_core_srv_conf_t *conf = child;
 
     ngx_conf_merge_msec_value(conf->resolver_timeout,
                               prev->resolver_timeout, 30000);
@@ -468,10 +468,10 @@ ngx_nlnk_core_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_value(conf->tcp_nodelay, prev->tcp_nodelay, 1);
 
-    ngx_conf_merge_size_value(conf->nlnk_buffer_size,
-                              prev->nlnk_buffer_size, NOISE_PROTOCOL_PAYLOAD_SIZE);
+    ngx_conf_merge_size_value(conf->nsoc_preread_buffer_size,
+                              prev->nsoc_preread_buffer_size, NOISE_PROTOCOL_PAYLOAD_SIZE);
 
-    if (conf->nlnk_buffer_size > NOISE_PROTOCOL_PAYLOAD_SIZE) {
+    if (conf->nsoc_preread_buffer_size > NOISE_PROTOCOL_PAYLOAD_SIZE) {
         ngx_log_error(
                 NGX_LOG_EMERG, cf->log, 0, "noise socket responder buffer too big");
         return NGX_CONF_ERROR ;
@@ -485,27 +485,27 @@ ngx_nlnk_core_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 
 
 static char *
-ngx_nlnk_core_error_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ngx_nsoc_core_error_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    ngx_nlnk_core_srv_conf_t  *cscf = conf;
+    ngx_nsoc_core_srv_conf_t  *cscf = conf;
 
     return ngx_log_set_log(cf, &cscf->error_log);
 }
 
 
 static char *
-ngx_nlnk_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ngx_nsoc_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     char                         *rv;
     void                         *mconf;
     ngx_uint_t                    m;
     ngx_conf_t                    pcf;
-    ngx_nlnk_module_t          *module;
-    ngx_nlnk_conf_ctx_t        *ctx, *stream_ctx;
-    ngx_nlnk_core_srv_conf_t   *cscf, **cscfp;
-    ngx_nlnk_core_main_conf_t  *cmcf;
+    ngx_nsoc_module_t          *module;
+    ngx_nsoc_conf_ctx_t        *ctx, *stream_ctx;
+    ngx_nsoc_core_srv_conf_t   *cscf, **cscfp;
+    ngx_nsoc_core_main_conf_t  *cmcf;
 
-    ctx = ngx_pcalloc(cf->pool, sizeof(ngx_nlnk_conf_ctx_t));
+    ctx = ngx_pcalloc(cf->pool, sizeof(ngx_nsoc_conf_ctx_t));
     if (ctx == NULL) {
         return NGX_CONF_ERROR;
     }
@@ -516,13 +516,13 @@ ngx_nlnk_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     /* the server{}'s srv_conf */
 
     ctx->srv_conf = ngx_pcalloc(cf->pool,
-                                sizeof(void *) * ngx_nlnk_max_module);
+                                sizeof(void *) * ngx_nsoc_max_module);
     if (ctx->srv_conf == NULL) {
         return NGX_CONF_ERROR;
     }
 
     for (m = 0; cf->cycle->modules[m]; m++) {
-        if (cf->cycle->modules[m]->type != NGX_NLNK_MODULE) {
+        if (cf->cycle->modules[m]->type != NGX_NSOC_MODULE) {
             continue;
         }
 
@@ -540,10 +540,10 @@ ngx_nlnk_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     /* the server configuration context */
 
-    cscf = ctx->srv_conf[ngx_nlnk_core_module.ctx_index];
+    cscf = ctx->srv_conf[ngx_nsoc_core_module.ctx_index];
     cscf->ctx = ctx;
 
-    cmcf = ctx->main_conf[ngx_nlnk_core_module.ctx_index];
+    cmcf = ctx->main_conf[ngx_nsoc_core_module.ctx_index];
 
     cscfp = ngx_array_push(&cmcf->servers);
     if (cscfp == NULL) {
@@ -557,7 +557,7 @@ ngx_nlnk_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     pcf = *cf;
     cf->ctx = ctx;
-    cf->cmd_type = NGX_NLNK_SRV_CONF;
+    cf->cmd_type = NGX_NSOC_SRV_CONF;
 
     rv = ngx_conf_parse(cf, NULL);
 
@@ -575,15 +575,15 @@ ngx_nlnk_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
 
 static char *
-ngx_nlnk_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ngx_nsoc_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    ngx_nlnk_core_srv_conf_t  *cscf = conf;
+    ngx_nsoc_core_srv_conf_t  *cscf = conf;
 
     ngx_str_t                    *value;
     ngx_url_t                     u;
     ngx_uint_t                    i, backlog;
-    ngx_nlnk_listen_t          *ls, *als;
-    ngx_nlnk_core_main_conf_t  *cmcf;
+    ngx_nsoc_listen_t          *ls, *als;
+    ngx_nsoc_core_main_conf_t  *cmcf;
 
     cscf->listen = 1;
 
@@ -604,14 +604,14 @@ ngx_nlnk_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_ERROR;
     }
 
-    cmcf = ngx_nlnk_conf_get_module_main_conf(cf, ngx_nlnk_core_module);
+    cmcf = ngx_nsoc_conf_get_module_main_conf(cf, ngx_nsoc_core_module);
 
     ls = ngx_array_push(&cmcf->listen);
     if (ls == NULL) {
         return NGX_CONF_ERROR;
     }
 
-    ngx_memzero(ls, sizeof(ngx_nlnk_listen_t));
+    ngx_memzero(ls, sizeof(ngx_nsoc_listen_t));
 
     ngx_memcpy(&ls->sockaddr.sockaddr, &u.sockaddr, u.socklen);
 
@@ -855,9 +855,9 @@ ngx_nlnk_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
 
 static char *
-ngx_nlnk_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ngx_nsoc_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    ngx_nlnk_core_srv_conf_t  *cscf = conf;
+    ngx_nsoc_core_srv_conf_t  *cscf = conf;
 
     ngx_str_t  *value;
 
