@@ -68,7 +68,7 @@ typedef struct ngx_noise_connection_s {
 
         ngx_buf_t *send_buf;
         ngx_buf_t *recv_buf;
-        ssize_t to_send;
+        size_t to_send;
         ssize_t neg_data_recv_size;
         ssize_t noise_msg_recv_size;
 

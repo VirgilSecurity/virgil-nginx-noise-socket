@@ -889,9 +889,9 @@ static ngx_int_t ngx_nsoc_do_handshake_process(ngx_connection_t *c,
                     *hp = NGX_NSOC_HANDSHAKE_END_PHASE;
 
                     if (nc->buf != NULL) {
-                        nc->buf->flush = 1;
-                        nc->buf->pos = nc->buf->start;
-                        nc->buf->last = nc->buf->start;
+                    	ngx_pfree(c->pool, nc->buf->start);
+                    	ngx_pfree(c->pool, nc->buf);
+                    	nc->buf = NULL;
                     }
 
                     nc->handshaked = 1;
