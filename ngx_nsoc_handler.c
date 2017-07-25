@@ -123,6 +123,8 @@ ngx_int_t ngx_nsoc_create_connection(ngx_noise_t *noise, ngx_connection_t *c,
     nc->buffer = ((flags & NGX_NSOC_BUFFER) != 0);
     nc->buffer_size = noise->buffer_size;
     nc->handshake_timeout = noise->handshake_timeout;
+    nc->noise_msg_recv_size = NGX_NSOC_SIZE_UNSET;
+    nc->neg_data_recv_size = NGX_NSOC_SIZE_UNSET;
 
     nc->noise_ctx = noise->ctx;
 
@@ -190,15 +192,15 @@ static ngx_int_t ngx_nsoc_read_negotiation(ngx_connection_t *c,
 {
 	ngx_int_t n;
     for (;;) {
-    	if ((nc->neg_data_recv_size == 0) || (nc->neg_data_size_reading)) {
+    	if ((nc->neg_data_recv_size == NGX_NSOC_SIZE_UNSET) || (nc->neg_data_size_reading)) {
             c->read->handler = ngx_nsoc_handshake_handler;
             c->write->handler = ngx_nsoc_handshake_handler;
 
             n = ngx_nsoc_read_negotiation_data_len(c, nc);
         } else {
-            n = ngx_nsoc_read_handshake_data(
-                    c, buf, nc->neg_data_recv_size);
-            if (n > 0)
+            n = nc->neg_data_recv_size ? ngx_nsoc_read_handshake_data(
+                    c, buf, nc->neg_data_recv_size) : 0;
+            if (n >= 0)
                 break;
         }
 
@@ -254,7 +256,7 @@ static ngx_int_t ngx_nsoc_read_negotiation_data_len(ngx_connection_t *c,
         ngx_log_debug0(NGX_LOG_DEBUG_EVENT, c->log, 0, "nsoc_reading_neg_data_size");
         ptr_size = neg_data_size;
         neg_data_size_len = 2;
-        nc->neg_data_recv_size = 0;
+        nc->neg_data_recv_size = NGX_NSOC_SIZE_UNSET;
 
     } else {
 
@@ -312,15 +314,15 @@ static ngx_int_t ngx_nsoc_read_noise_msg(ngx_connection_t *c,
 {
 	ngx_int_t n;
 	for (;;) {
-    	if ((nc->noise_msg_recv_size == 0) || (nc->noise_msg_size_reading)) {
+    	if ((nc->noise_msg_recv_size == NGX_NSOC_SIZE_UNSET) || (nc->noise_msg_size_reading)) {
             c->read->handler = ngx_nsoc_handshake_handler;
             c->write->handler = ngx_nsoc_handshake_handler;
 
             n = ngx_nsoc_read_noise_msg_len(c, nc);
         } else {
-            n = ngx_nsoc_read_handshake_data(
-                    c, buf, nc->noise_msg_recv_size);
-            if (n > 0)
+            n = nc->noise_msg_recv_size ? ngx_nsoc_read_handshake_data(
+                    c, buf, nc->noise_msg_recv_size) : 0;
+            if (n >= 0)
                 break;
         }
 
@@ -372,7 +374,7 @@ static ngx_int_t ngx_nsoc_read_noise_msg_len(ngx_connection_t *c,
         ngx_log_debug0(NGX_LOG_DEBUG_EVENT, c->log, 0, "nsoc_reading_noise_msg_size");
         ptr_size = noise_msg_size;
         noise_msg_size_len = 2;
-        nc->noise_msg_recv_size = 0;
+        nc->noise_msg_recv_size = NGX_NSOC_SIZE_UNSET;
 
     } else {
 
@@ -468,19 +470,17 @@ static ngx_int_t ngx_nsoc_handshake_start_action_write_message(ngx_connection_t 
                     sizeof(noise_handshake_first_hdr_t)
                             + NGX_NSOC_LEN_FIELD_SIZE);
 
-            nc->msg_num = NGX_NSOC_2MSG;
+            nc->msg_num = NGX_NSOC_2MSG_OK;
 
             break;
-        case NGX_NSOC_2MSG:
-            size = NGX_NSOC_2MSG_NEG_DATA_SIZE + NOISE_PROTOCOL_MAX_HANDSHAKE_LEN + 2*NGX_NSOC_LEN_FIELD_SIZE;
+        case NGX_NSOC_2MSG_OK:
+            size = NGX_NSOC_2MSG_NEG_DATA_OK_SIZE + NOISE_PROTOCOL_MAX_HANDSHAKE_LEN + 2*NGX_NSOC_LEN_FIELD_SIZE;
             b->start = b->pos = ngx_palloc(c->pool,size);
             b->end = b->last = b->pos + size;
 
-            size = NGX_NSOC_2MSG_NEG_DATA_SIZE + 2*NGX_NSOC_LEN_FIELD_SIZE;
+            size = NGX_NSOC_2MSG_NEG_DATA_OK_SIZE + 2*NGX_NSOC_LEN_FIELD_SIZE;
 
-            *(uint16_t *)(&b->pos[0]) = swapw(NGX_NSOC_2MSG_NEG_DATA_SIZE);
-            *(uint16_t *)(&b->pos[2]) = NGX_NSOC_VERSION_ID;
-            b->pos[4] = 0;
+            *(uint16_t *)(&b->pos[0]) = swapw(NGX_NSOC_2MSG_NEG_DATA_OK_SIZE);
 
             nc->msg_num = NGX_NSOC_3MSG;
 
@@ -495,23 +495,44 @@ static ngx_int_t ngx_nsoc_handshake_start_action_write_message(ngx_connection_t 
             *(uint16_t *)(&b->pos[0]) = swapw(NGX_NSOC_3MSG_NEG_DATA_SIZE);
             *(uint16_t *)(&b->pos[2]) = NGX_NSOC_VERSION_ID;
 
-            nc->msg_num = 0;
+            nc->msg_num = NGX_NSOC_1MSG;
 
             break;
         case NGX_NSOC_2MSG_ERR:
-            size = NGX_NSOC_2MSG_NEG_ERR_SIZE + NOISE_PROTOCOL_MAX_HANDSHAKE_LEN + 2*NGX_NSOC_LEN_FIELD_SIZE;
+            size = NGX_NSOC_2MSG_NEG_DATA_ERR_SIZE + NOISE_PROTOCOL_MAX_HANDSHAKE_LEN + 2*NGX_NSOC_LEN_FIELD_SIZE;
             b->start = b->pos = ngx_palloc(c->pool,size);
             b->end = b->last = b->pos + size;
 
-            size = NGX_NSOC_2MSG_NEG_ERR_SIZE + 2*NGX_NSOC_LEN_FIELD_SIZE;
+            size = NGX_NSOC_2MSG_NEG_DATA_ERR_SIZE + 2*NGX_NSOC_LEN_FIELD_SIZE;
 
-            *(uint16_t *)(&b->pos[0]) = swapw(NGX_NSOC_2MSG_NEG_ERR_SIZE);
+            *(uint16_t *)(&b->pos[0]) = swapw(NGX_NSOC_2MSG_NEG_DATA_ERR_SIZE);
             *(uint16_t *)(&b->pos[2]) = NGX_NSOC_VERSION_ID;
-            b->pos[4] = 0;
+            b->pos[4] = 0xFF;
+            *(uint16_t *)(&b->pos[5]) = 0;
+            b->last = b->pos + NGX_NSOC_2MSG_NEG_DATA_ERR_SIZE + 2*NGX_NSOC_LEN_FIELD_SIZE;
+            b->pos = b->start;
 
-            nc->msg_num = 0;
+            nc->msg_num = NGX_NSOC_1MSG;
 
-            break;
+            *buf = b;
+
+            return NGX_OK;
+
+        case NGX_NSOC_2MSG_FB:
+
+            size = NGX_NSOC_2MSG_NEG_DATA_FB_SIZE + NOISE_PROTOCOL_MAX_HANDSHAKE_LEN + 2*NGX_NSOC_LEN_FIELD_SIZE;
+            b->start = b->pos = ngx_palloc(c->pool,size);
+            b->end = b->last = b->pos + size;
+
+            size = NGX_NSOC_2MSG_NEG_DATA_ERR_SIZE + 2*NGX_NSOC_LEN_FIELD_SIZE;
+
+            *(uint16_t *)(&b->pos[0]) = swapw(NGX_NSOC_2MSG_NEG_DATA_ERR_SIZE);
+            *(uint16_t *)(&b->pos[2]) = NGX_NSOC_VERSION_ID;
+            b->pos[4] = 0x01;
+
+            nc->msg_num = NGX_NSOC_1MSG;
+
+        	break;
         default:
             ngx_pfree(c->pool, b);
             return NGX_ERROR;
@@ -547,54 +568,47 @@ static ngx_int_t ngx_nsoc_handshake_start_action_write_message(ngx_connection_t 
 static ngx_int_t ngx_nsoc_handshake_start_action_read_message(ngx_connection_t *c,
         ngx_noise_connection_t *nc)
 {
-    size_t size = 0;
+    ssize_t size = NGX_NSOC_SIZE_UNSET;
     ngx_int_t n;
-    uint8_t *handshake_status;
+    uint8_t handshake_status;
     NoiseBuffer mbuf;
 
     for (;;) {
+
+    	n = NGX_OK;
+
         if (nc->msg_num == NGX_NSOC_1MSG) {
+        	nc->msg_num = NGX_NSOC_2MSG_OK;
             break;
-        } else if (nc->msg_num == NGX_NSOC_2MSG) {
-            if (size == 0) size = NGX_NSOC_2MSG_NEG_DATA_SIZE;
+        } else if (nc->msg_num == NGX_NSOC_2MSG_OK) {
+
+            if (size == NGX_NSOC_SIZE_UNSET) size = NGX_NSOC_2MSG_NEG_DATA_OK_SIZE;
             else {
-                handshake_status  = (uint8_t *) (nc->buf->pos +2);
-                if(*handshake_status == 0) break;
-                if(*handshake_status == 1) return NGX_ERROR;
-                if(*handshake_status == 1) return NGX_ERROR;
+            	if(nc->neg_data_recv_size == NGX_NSOC_2MSG_NEG_DATA_OK_SIZE) {
+            		nc->msg_num = NGX_NSOC_3MSG;
+            		break;
+            	}
+                handshake_status  = *(uint8_t *) (nc->buf->pos +2);
+                if(handshake_status == 0xFF) return NGX_ERROR;
+                if(handshake_status == 1) return NGX_ERROR;
             }
         } else if (nc->msg_num == NGX_NSOC_3MSG) {
-            if (size == 0) size = NGX_NSOC_3MSG_NEG_DATA_SIZE;
-            else
-                break;
+
+            if (size == NGX_NSOC_SIZE_UNSET) size = NGX_NSOC_3MSG_NEG_DATA_SIZE;
+            else {
+            	nc->msg_num = NGX_NSOC_1MSG;
+            	break;
+            }
         } else {
             return NGX_ERROR;
         }
 
         n = ngx_nsoc_read_negotiation(c, nc, &nc->buf, size);
 
-        if (n <= 0) {
-            if (nc->buf != NULL) {
-                ngx_pfree(c->pool, nc->buf->start);
-                ngx_pfree(c->pool, nc->buf);
-                nc->buf = NULL;
-            }
-
-            return n;
-
-        }
-
-        if (*(uint16_t *) (nc->buf->pos) != NGX_NSOC_VERSION_ID) {
-            ngx_pfree(c->pool, nc->buf->start);
-            ngx_pfree(c->pool, nc->buf);
-            nc->buf = NULL;
-
-            nc->msg_num = NGX_NSOC_2MSG_ERR;
-            continue;
+        if (n < 0) {
+            break;
         }
     }
-
-    nc->msg_num++;
 
     if (nc->buf != NULL) {
         ngx_pfree(c->pool, nc->buf->start);
@@ -602,8 +616,11 @@ static ngx_int_t ngx_nsoc_handshake_start_action_read_message(ngx_connection_t *
         nc->buf = NULL;
     }
 
+    if(n < 0) return n;
+
     n = ngx_nsoc_read_noise_msg(c,nc,&nc->buf);
-    if(n <= 0) return n;
+
+    if(n < 0) return n;
 
     noise_buffer_set_input(mbuf, nc->buf->start, nc->noise_msg_recv_size);
 
@@ -621,9 +638,9 @@ static ngx_int_t ngx_nsoc_handshake_start_action_read_message(ngx_connection_t *
     nc->buf = NULL;
 
     nc->last = 0;
-    nc->noise_msg_recv_size = 0;
+    nc->noise_msg_recv_size = NGX_NSOC_SIZE_UNSET;
     nc->noise_msg_size_reading = 0;
-    nc->neg_data_recv_size = 0;
+    nc->neg_data_recv_size = NGX_NSOC_SIZE_UNSET;
     nc->neg_data_size_reading = 0;
 
     return NGX_OK;
@@ -658,8 +675,56 @@ static ngx_int_t ngx_nsoc_do_handshake_process(ngx_connection_t *c,
 
                 	first_hdr = (noise_handshake_first_hdr_t *)nc->buf->start;
 
-                	if(first_hdr->version_id != NGX_NSOC_VERSION_ID)
-                	    return NGX_ERROR;
+                	if(first_hdr->version_id != NGX_NSOC_VERSION_ID){
+                		nc->msg_num = NGX_NSOC_2MSG_ERR;
+                		n = ngx_nsoc_handshake_start_action_write_message(c, nc, &b,
+                				&mbuf);
+
+                        ngx_log_debug0(
+                                NGX_LOG_DEBUG_EVENT, c->log, 0,
+                                "NOISE handshake 2 err msg  write");
+
+                		if (n != NGX_OK)
+                			return n;
+                        size = b->last - b->pos;
+
+                        n = c->send(c, b->pos, size);
+
+                        c->read->handler = ngx_nsoc_handshake_handler;
+                        c->write->handler = ngx_nsoc_handshake_handler;
+
+                        if ((n == NGX_AGAIN) || (n < size)) {
+                            c->write->ready = 0;
+
+                            if (ngx_handle_write_event(c->write, 0) != NGX_OK) {
+                                return NGX_ERROR;
+                            }
+
+                            if (!c->write->timer_set) {
+                                ngx_add_timer(c->write, nc->handshake_timeout);
+                            }
+
+                            if (c->read->timer_set) {
+                                ngx_del_timer(c->read);
+                            }
+
+                            nc->buf = b;
+                            nc->last = NOISE_ACTION_WRITE_MESSAGE;
+
+                            ngx_log_debug0(
+                                    NGX_LOG_DEBUG_EVENT, c->log, 0,
+                                    "NOISE handshake 2 err msg write again");
+
+                            return NGX_AGAIN;
+                        }
+
+                        c->read->ready = 0;
+
+                        ngx_pfree(c->pool, b->start);
+                        nc->buf = NULL;
+
+                		return NGX_ERROR;
+                	}
 
                 	nc->prologue->header.cipher_id = first_hdr->cipher_id;
                 	nc->prologue->header.dh_id = first_hdr->dh_id;
@@ -982,11 +1047,14 @@ ssize_t ngx_nsoc_recv(ngx_connection_t *c, u_char *buf, size_t size)
             NGX_LOG_DEBUG_EVENT, c->log, 0, "ngx_nsoc_recv: rs_stat:%d rs:%d",
             nc->noise_msg_size_reading, nc->noise_msg_recv_size);
 
-    if ((nc->noise_msg_recv_size == 0) || (nc->noise_msg_size_reading)) {
+    if ((nc->noise_msg_recv_size == NGX_NSOC_SIZE_UNSET) || (nc->noise_msg_size_reading)) {
         n = ngx_nsoc_read_noise_msg_len(c, nc);
 
         if (n != NGX_OK) {
             return n;
+        }
+        if(nc->noise_msg_recv_size == NGX_NSOC_SIZE_UNSET) {
+        	return NGX_AGAIN;
         }
 
         b = ngx_create_temp_buf(c->pool, nc->noise_msg_recv_size);
@@ -1025,7 +1093,7 @@ ssize_t ngx_nsoc_recv(ngx_connection_t *c, u_char *buf, size_t size)
                     ngx_pfree(c->pool, b->start);
                     ngx_pfree(c->pool, b);
 
-                    nc->noise_msg_recv_size = 0;
+                    nc->noise_msg_recv_size = NGX_NSOC_SIZE_UNSET;
                     nc->recv_buf = NULL;
                     return NGX_ERROR;
                 }
@@ -1053,7 +1121,7 @@ ssize_t ngx_nsoc_recv(ngx_connection_t *c, u_char *buf, size_t size)
 
                 nc->recv_buf = NULL;
                 nc->last = 0;
-                nc->noise_msg_recv_size = 0;
+                nc->noise_msg_recv_size = NGX_NSOC_SIZE_UNSET;
 
                 return plain_data_size;
             }
@@ -1067,7 +1135,7 @@ ssize_t ngx_nsoc_recv(ngx_connection_t *c, u_char *buf, size_t size)
             ngx_pfree(c->pool, b);
 
             nc->recv_buf = NULL;
-            nc->noise_msg_recv_size = 0;
+            nc->noise_msg_recv_size = NGX_NSOC_SIZE_UNSET;
         }
 
         nc->last = n;
