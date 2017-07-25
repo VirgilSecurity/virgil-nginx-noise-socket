@@ -25,6 +25,7 @@ stage('Build'){
             sh "cd libsodium && ./configure"
             sh "cd libsodium && make"
             sh "cd libsodium && make install"
+            sh "export PATH=$PATH:/usr/local/lib"
             // build noise
             sh "git clone https://github.com/rweather/noise-c.git"
             sh "cd noise-c && autoreconf -i"
