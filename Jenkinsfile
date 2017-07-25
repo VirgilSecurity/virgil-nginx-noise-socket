@@ -24,6 +24,7 @@ stage('Build'){
             sh "git clone https://github.com/jedisct1/libsodium.git -b stable"
             sh "cd libsodium && ./configure"
             sh "cd libsodium && make"
+            sh "cd libsodium && make install"
             sh "ls -la libsodium"
             sh "ls -la libsodium/src/"
             sh "ls -la libsodium/src/libsodium"
