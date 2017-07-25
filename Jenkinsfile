@@ -29,8 +29,8 @@ stage('Build'){
             sh "ls -la libsodium/src/libsodium"
             sh "ls -la libsodium/src/libsodium/.libs"
             sh "cp libsodium/src/libsodium/.libs/libsodium.so.18.3.0 /lib/x86_64-linux-gnu/libsodium.so.18.3.0"
-            sh "ln -s /lib/x86_64-linux-gnu/libsodium.so.18.3.0 /lib/x86_64-linux-gnu/libsodium.so.18"
-            sh "ln -s /lib/x86_64-linux-gnu/libsodium.so.18.3.0 /lib/x86_64-linux-gnu/libsodium.so"
+            sh "ln -s /lib/x86_64-linux-gnu/libsodium.so.18.3.0 /lib/libsodium.so.18"
+            sh "ln -s /lib/x86_64-linux-gnu/libsodium.so.18.3.0 /lib/libsodium.so"
             sh "cp libsodium/src/libsodium/.libs/libsodium.a /lib/libsodium.a"
             // build noise
             sh "git clone https://github.com/rweather/noise-c.git"
