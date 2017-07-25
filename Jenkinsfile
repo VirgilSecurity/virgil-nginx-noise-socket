@@ -18,7 +18,7 @@ stage('Build'){
         }
         unstash "nginx-source"
         docker.image('centos:7').inside("--user root"){
-            sh "yum install -y gcc make pcre pcre-devel pcre2 pcre2-devel openssl-devel autoconf automake flex bison git ruby ruby-devel curl libyaml-devel rpm-build"
+            sh "yum install -y gcc make pcre pcre-devel pcre2 pcre2-devel openssl-devel autoconf automake flex bison git ruby ruby-devel curl libyaml-devel rpm-build wget"
             sh "gem install fpm"
             // build libsodium
             // sh "git clone https://github.com/jedisct1/libsodium.git -b stable"
