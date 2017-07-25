@@ -5,7 +5,7 @@ Nginx module that implements Noise Socket Protocol by using Virgil Security infr
 
  - Own context in the Nginx server providing a functionality of TCP of a proxy.
  - Protection of traffic by means of [Noise Protocol](http://noiseprotocol.org/).
- - At the moment only `Noise_XX_25519_AESGCM_SHA256` noise protocol pattern is realized.
+ - At the moment only `Noise_XX_25519_AESGCM_BLAKE2b` noise protocol pattern is realized.
 
 ## Building of Nginx with the virgil-nginx-noise-socket module:
 
@@ -36,18 +36,18 @@ for Centos 7:
 ###### For option of use as a crypto backend of libsodium:
 *  To take stable release of libsodium and to build it: 
   ```bash
-  	$ git clone https://github.com/jedisct1/libsodium.git -b stable
-  	$ ./configure
-	$ make && make check
-	$ sudo make install
+    $ git clone https://github.com/jedisct1/libsodium.git -b stable
+    $ ./configure
+    $ make && make check
+    $ sudo make install
   ```
   * To build the ´Noise-C´ library with option:
   
   ```bash
     $ autoreconf -i
-	$ ./configure --with-openssl --with-libsodium
-  	$ make
-	$ make check
+    $ ./configure --with-openssl --with-libsodium
+    $ make
+    $ make check
  ``` 
   * Make sure that the list of the required libraries contains libsodium in the `virgil-nginx-noise-socket/config` file (a line 37, ngx_module_libs="... - lsodium"
   
