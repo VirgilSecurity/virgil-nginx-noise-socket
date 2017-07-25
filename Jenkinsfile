@@ -20,15 +20,22 @@ stage('Build'){
         docker.image('centos:7').inside("--user root"){
             sh "yum install -y gcc make pcre pcre-devel pcre2 pcre2-devel openssl-devel autoconf automake flex bison git ruby ruby-devel curl libyaml-devel rpm-build"
             sh "gem install fpm"
+            // build libsodium
+            sh "git clone https://github.com/jedisct1/libsodium.git -b stable"
+            sh "cd libsodium && ./configure"
+            sh "cd libsodium && make"
+            sh "cd libsodium && make install"
+            // build noise
             sh "git clone https://github.com/rweather/noise-c.git"
             sh "cd noise-c && autoreconf -i"
-            sh "cd noise-c && ./configure"
+            sh "cd noise-c && ./configure --with-openssl --with-libsodium"
             sh "cd noise-c && make"
             sh "cd noise-c && make install"
             sh "cd noise-c && mkdir noise-artifact"
             sh "cd noise-c && export DESTDIR='noise-artifact' && make install"
             sh "ls -la noise-c/include/noise/noise-artifact"
             sh "cd nginx-1.12.0 && ./configure --conf-path=/etc/nginx/nginx.conf --error-log-path=/var/log/nginx/error.log --pid-path=/var/run/nginx.pid --lock-path=/var/lock/nginx.lock --http-log-path=/var/log/nginx/access.log --http-client-body-temp-path=/var/lib/nginx/body --http-proxy-temp-path=/var/lib/nginx/proxy --without-http_fastcgi_module --without-http_uwsgi_module --with-http_stub_status_module --with-http_gzip_static_module --with-http_ssl_module --with-debug --add-module=./virgil-nginx-noise-socket"
+            // build nginx
             sh "cd nginx-1.12.0 && make"
             sh "cd nginx-1.12.0 && mkdir nginx-artifact"
             sh "cd nginx-1.12.0 && export DESTDIR='nginx-artifact' && make install"
