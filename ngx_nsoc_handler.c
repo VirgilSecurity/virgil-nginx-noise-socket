@@ -1409,7 +1409,7 @@ ssize_t ngx_nsoc_write(ngx_connection_t *c, u_char *data, size_t size)
         ngx_log_debug1(NGX_LOG_DEBUG_EVENT, c->log, 0, "nsoc_write: %d", n);
 
         if (n > 0) {
-            c->sent += n;
+            //c->sent += n;
             b->pos += n;
 
             if (b->pos == b->last) {
