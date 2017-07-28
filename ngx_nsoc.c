@@ -47,7 +47,7 @@ static ngx_command_t ngx_nsoc_commands[] =
 
 static ngx_core_module_t ngx_nsoc_module_ctx =
 {
-  ngx_string("noisesocket"),
+  ngx_string("noisesock"),
   NULL,
   NULL };
 
@@ -84,7 +84,7 @@ ngx_nsoc_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return "is duplicate";
     }
 
-    /* the main noisesocket context */
+    /* the main noiselink context */
 
     ctx = ngx_pcalloc(cf->pool, sizeof(ngx_nsoc_conf_ctx_t));
     if (ctx == NULL) {
@@ -93,11 +93,11 @@ ngx_nsoc_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     *(ngx_nsoc_conf_ctx_t **) conf = ctx;
 
-    /* count the number of the noisesocket modules and set up their indices */
+    /* count the number of the noiselink modules and set up their indices */
 
     ngx_nsoc_max_module = ngx_count_modules(cf->cycle, NGX_NSOC_MODULE);
 
-    /* the noisesocket main_conf context, it's the same in the all noisesocket contexts */
+    /* the noiselink main_conf context, it's the same in the all noiselink contexts */
 
     ctx->main_conf = ngx_pcalloc(
             cf->pool, sizeof(void *) * ngx_nsoc_max_module);
@@ -106,7 +106,7 @@ ngx_nsoc_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     }
 
     /*
-     * the noisesocket null srv_conf context, it is used to merge
+     * the noiselink null srv_conf context, it is used to merge
      * the server{}s' srv_conf's
      */
 
@@ -117,7 +117,7 @@ ngx_nsoc_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     }
 
     /*
-     * create the main_conf's and the null srv_conf's of the all noisesocket modules
+     * create the main_conf's and the null srv_conf's of the all noiselink modules
      */
 
     for (m = 0; cf->cycle->modules[m]; m++) {
@@ -160,7 +160,7 @@ ngx_nsoc_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         }
     }
 
-    /* parse inside the noisesocket{} block */
+    /* parse inside the noiselink{} block */
 
     cf->module_type = NGX_NSOC_MODULE;
     cf->cmd_type = NGX_NSOC_MAIN_CONF;
@@ -171,7 +171,7 @@ ngx_nsoc_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return rv;
     }
 
-    /* init noisesocket{} main_conf's, merge the server{}s' srv_conf's */
+    /* init noiselink{} main_conf's, merge the server{}s' srv_conf's */
 
     cmcf = ctx->main_conf[ngx_nsoc_core_module.ctx_index];
     cscfp = cmcf->servers.elts;
@@ -184,7 +184,7 @@ ngx_nsoc_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         module = cf->cycle->modules[m]->ctx;
         mi = cf->cycle->modules[m]->ctx_index;
 
-        /* init noisesocket{} main_conf's */
+        /* init noiselink{} main_conf's */
 
         cf->ctx = ctx;
 

@@ -1,11 +1,11 @@
-# virgil-nginx-noise-socket
+</b># virgil-nginx-noise-socket
 Nginx module that implements Noise Socket Protocol by using Virgil Security infrastructure.
 
 ## Features ##
 
  - Own context in the Nginx server providing a functionality of TCP of a proxy.
  - Protection of traffic by means of [Noise Protocol](http://noiseprotocol.org/).
- - At the moment only `Noise_XX_25519_AESGCM_SHA256` noise protocol pattern is realized.
+ - At the moment only `Noise_XX_25519_AESGCM_BLAKE2b` noise protocol pattern is realized.
 
 ## Building of Nginx with the virgil-nginx-noise-socket module:
 
@@ -25,15 +25,32 @@ for Centos 7:
 
 #### Building
 
-1. The virgil-nginx-noise-socket module is tested with nginx-1.12.0.
+1. The virgil-nginx-noise-socket module is tested with nginx-1.12.1.
 2. Set [Noise-C](https://github.com/rweather/noise-c) library is necessary for building of the server.
 * How to build `Noise-C` it is described in [Noise-C Documentation](http://rweather.github.io/noise-c/index.html).
 * Installation of library `Noise-C` in system:
 
 ```bash
-	$make install
+	$ make install
 ```
-
+###### For option of use as a crypto backend of libsodium:
+*  To take stable release of libsodium and to build it: 
+  ```bash
+    $ git clone https://github.com/jedisct1/libsodium.git -b stable
+    $ ./configure
+    $ make && make check
+    $ sudo make install
+  ```
+  * To build the ´Noise-C´ library with option:
+  
+  ```bash
+    $ autoreconf -i
+    $ ./configure --with-openssl --with-libsodium
+    $ make
+    $ make check
+ ``` 
+  * Make sure that the list of the required libraries contains libsodium in the `virgil-nginx-noise-socket/config` file (a line 37, ngx_module_libs="... - lsodium"
+  
  2. The example of a script for build of the nginx server with the module is located in `virgil-nginx-noise-socket/example/nginx_configure.sh`.
  
  3. The example of a test configuration of the server is located in `virgil-nginx-noise-socket/example/nginx.conf`. The configuration realizes a functionality of reverse proxy and a backend server working in one copy of nginx launched by the local machine. The configuration works as follows:
@@ -42,7 +59,7 @@ for Centos 7:
 	<tr>
     <td>https://localhost/<td>-></td>
     	<td>internal redirect to `noise_socket` context<td>-></td>
-    	<td>td>proxy to backend over noise socket<td>---></td>
+    	<td>proxy to backend over noise socket<td>---></td>
 	</tr>
     <tr>
     	<td>---></td>
@@ -82,11 +99,11 @@ Context: 	server
 The `[noise]` parameter allows specifying that all connections accepted on this port should work in noise socket mode. Defines that this socket is used as noise responder (server). Remaining parameters are similar to the parameters described for the directive of [listen](http://nginx.org/en/docs/stream/ngx_stream_core_module.html#listen)  of the ngx_stream_core_module module.
 
 ```nginx
-Syntax: 	nsoc_buffer_size size;
-Default: 	nsoc_buffer_size 65519;
+Syntax: 	preread_buffer_size size;
+Default: 	preread_buffer_size 65517;
 Context: 	noise_socket, server
 ```
-Specifies a size of the Noise transport message payload buffer for responder (server). Value by default is the maximum size of the payload determined in the specification [The Noise Protocol Framework](http://noiseprotocol.org/noise.html).
+Specifies a size of the preread buffer for server.
 
 ```nginx
 Syntax: 	server_private_key_file file;
@@ -112,12 +129,12 @@ Context: 	noise_socket, server
 Enables the noise socket protocol for connections to a proxied server. 
 
 ```nginx
-Syntax: 	proxy_buffer_size size;
-Default: 	proxy_buffer_size 65519;
+Syntax: 	block_buffer_size size;
+Default: 	block_buffer_size 65517;
 Context: 	noise_socket, server
 ```
 
-Sets the size of the buffer used for reading data from the proxied server. Also sets the size of the buffer used for reading data from the client.  Value by default is the maximum size of the payload determined in the specification [The Noise Protocol Framework](http://noiseprotocol.org/noise.html). This parameter determines the buffer size for noise initiator(client) and shall be equal to the `nsoc_buffer_size` parameter for noise responder (server).
+Sets the size of the buffer used for reading data from the proxied server. Also sets the size of the buffer used for reading data from the client.  Value by default is the maximum size of the payload determined in the specification [The Noise Protocol Framework](http://noiseprotocol.org/noise.html). This parameter determines the buffer size for noise initiator(client) and noise responder (server).
 
 ```nginx
 Syntax: 	noise_handshake_timeout time;

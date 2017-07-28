@@ -67,7 +67,6 @@ typedef struct {
         /*noise*/
         unsigned noise_on :1;
         /*end noise*/
-        unsigned ssl :1;
         //unsigned proxy_protocol :1;
 } ngx_nsoc_addr_conf_t;
 
@@ -164,7 +163,7 @@ typedef struct {
         ngx_uint_t line;
 
         ngx_flag_t tcp_nodelay;
-        size_t nsoc_buffer_size;
+        size_t nsoc_preread_buffer_size;
         ngx_msec_t preread_timeout;
 
         ngx_log_t *error_log;
@@ -274,7 +273,7 @@ extern ngx_uint_t ngx_nsoc_max_module;
 extern ngx_module_t ngx_nsoc_core_module;
 
 typedef ngx_int_t (*ngx_nsoc_filter_pt)(ngx_nsoc_session_t *s,
-        ngx_chain_t *chain, ngx_uint_t from_upnoisesocket);
+        ngx_chain_t *chain, ngx_uint_t from_upstream);
 
 extern ngx_nsoc_filter_pt ngx_nsoc_top_filter;
 

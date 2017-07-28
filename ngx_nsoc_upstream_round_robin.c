@@ -16,19 +16,6 @@ static ngx_nsoc_upstream_rr_peer_t *ngx_nsoc_upstream_get_peer(
 static void ngx_nsoc_upstream_notify_round_robin_peer(
         ngx_peer_connection_t *pc, void *data, ngx_uint_t state);
 
-#if (NGX_NSOC_SSL)
-
-static ngx_int_t ngx_nsoc_upstream_set_round_robin_peer_session(
-        ngx_peer_connection_t *pc, void *data);
-static void ngx_nsoc_upstream_save_round_robin_peer_session(
-        ngx_peer_connection_t *pc, void *data);
-static ngx_int_t ngx_nsoc_upstream_empty_set_session(
-        ngx_peer_connection_t *pc, void *data);
-static void ngx_nsoc_upstream_empty_save_session(
-        ngx_peer_connection_t *pc, void *data);
-
-#endif
-
 ngx_int_t ngx_nsoc_upstream_init_round_robin(ngx_conf_t *cf,
         ngx_nsoc_upstream_srv_conf_t *us)
 {
@@ -293,12 +280,6 @@ ngx_int_t ngx_nsoc_upstream_init_round_robin_peer(
     s->upstream->peer.free = ngx_nsoc_upstream_free_round_robin_peer;
     s->upstream->peer.notify = ngx_nsoc_upstream_notify_round_robin_peer;
     s->upstream->peer.tries = ngx_nsoc_upstream_tries(rrp->peers);
-#if (NGX_NSOC_SSL)
-    s->upstream->peer.set_session =
-            ngx_nsoc_upstream_set_round_robin_peer_session;
-    s->upstream->peer.save_session =
-            ngx_nsoc_upstream_save_round_robin_peer_session;
-#endif
 
     return NGX_OK;
 }
@@ -415,11 +396,6 @@ ngx_int_t ngx_nsoc_upstream_create_round_robin_peer(
     s->upstream->peer.get = ngx_nsoc_upstream_get_round_robin_peer;
     s->upstream->peer.free = ngx_nsoc_upstream_free_round_robin_peer;
     s->upstream->peer.tries = ngx_nsoc_upstream_tries(rrp->peers);
-#if (NGX_NSOC_SSL)
-    s->upstream->peer.set_session = ngx_nsoc_upstream_empty_set_session;
-    s->upstream->peer.save_session =
-            ngx_nsoc_upstream_empty_save_session;
-#endif
 
     return NGX_OK;
 }

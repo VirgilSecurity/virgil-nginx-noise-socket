@@ -1,9 +1,10 @@
 #!/bin/bash
 #pcre libraries
 ./objs/nginx -s stop
-sudo apt-get install libpcre3 libpcre3-dev
-#configure options
+#sudo apt-get install libpcre3 libpcre3-dev
 make clean
+#configure options
+#make clean
 ./configure \
  --conf-path=/etc/nginx/nginx.conf \
  --error-log-path=/var/log/nginx/error.log \
@@ -22,16 +23,3 @@ make clean
 
 make
 make install
-
-#./objs/nginx
-
-#nginx path prefix: "/usr/local/nginx"
-#nginx binary file: "/usr/local/nginx/sbin/nginx"
-#nginx configuration prefix: "/etc/nginx"
-#nginx configuration file: "/etc/nginx/nginx.conf"
-#nginx pid file: "/var/run/nginx.pid"
-#nginx error log file: "/var/log/nginx/error.log"
-#nginx http access log file: "/var/log/nginx/access.log"
-#nginx http client request body temporary files: "/var/lib/nginx/body"
-#nginx http proxy temporary files: "/var/lib/nginx/proxy"
-#nginx http scgi temporary files: "scgi_temp"

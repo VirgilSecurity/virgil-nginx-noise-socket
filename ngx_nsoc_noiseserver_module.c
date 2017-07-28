@@ -11,9 +11,6 @@
 typedef ngx_int_t (*ngx_noise_variable_handler_pt)(ngx_connection_t *c,
         ngx_pool_t *pool, ngx_str_t *s);
 
-#define NGX_DEFAULT_CIPHERS     "HIGH:!aNULL:!MD5"
-#define NGX_DEFAULT_ECDH_CURVE  "auto"
-
 static ngx_int_t ngx_nsoc_noiseserver_handler(ngx_nsoc_session_t *s);
 static ngx_int_t ngx_nsoc_noiseserver_init_connection(ngx_noise_t *noise,
         ngx_connection_t *c);
@@ -48,7 +45,7 @@ static ngx_command_t ngx_nsoc_noiseserver_commands[] =
     offsetof(ngx_nsoc_noiseserver_conf_t, client_public_key_file),
     NULL },
 
-  ngx_null_command
+	ngx_null_command
 };
 
 static ngx_nsoc_module_t ngx_nsoc_noiseserver_module_ctx =
@@ -246,7 +243,7 @@ ngx_nsoc_noiseserver_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 {
     ngx_nsoc_noiseserver_conf_t *prev = parent;
     ngx_nsoc_noiseserver_conf_t *conf = child;
-
+    ngx_nsoc_core_srv_conf_t *cscf;
     ngx_pool_cleanup_t *cln;
 
     ngx_conf_merge_msec_value(
@@ -264,8 +261,14 @@ ngx_nsoc_noiseserver_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 
     conf->noise->log = cf->log;
     conf->noise->handshake_timeout = conf->handshake_timeout;
+    memcpy( conf->noise->prologue.strPrologue,"NoiseSocketInit1",16);
+    conf->noise->prologue.header_len = swapw(NGX_NSOC_1MSG_NEG_DATA_SIZE);
 
-    if (ngx_nsoc_create(conf->noise, NULL) != NGX_OK) {
+    cscf = ngx_nsoc_conf_get_module_srv_conf(cf, ngx_nsoc_core_module);
+
+    if (ngx_nsoc_create(conf->noise, cscf->nsoc_preread_buffer_size, NULL) != NGX_OK) {
+        ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
+                      "noise server module merge_conf error: unable to create noise ctx");
         return NGX_CONF_ERROR ;
     }
 

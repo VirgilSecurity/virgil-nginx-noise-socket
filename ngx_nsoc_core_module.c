@@ -86,11 +86,11 @@ static ngx_command_t  ngx_nsoc_core_commands[] = {
       offsetof(ngx_nsoc_core_srv_conf_t, tcp_nodelay),
       NULL },
 
-    { ngx_string("nsoc_buffer_size"),
+    { ngx_string("preread_buffer_size"),
       NGX_NSOC_MAIN_CONF|NGX_NSOC_SRV_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_size_slot,
       NGX_NSOC_SRV_CONF_OFFSET,
-      offsetof(ngx_nsoc_core_srv_conf_t,nsoc_buffer_size ),
+      offsetof(ngx_nsoc_core_srv_conf_t,nsoc_preread_buffer_size ),
       NULL },
 
     { ngx_string("preread_timeout"),
@@ -223,7 +223,7 @@ ngx_nsoc_core_preread_phase(ngx_nsoc_session_t *s,
     while (rc == NGX_AGAIN) {
 
         if (c->buffer == NULL) {
-            c->buffer = ngx_create_temp_buf(c->pool, cscf->nsoc_buffer_size);
+            c->buffer = ngx_create_temp_buf(c->pool, cscf->nsoc_preread_buffer_size);
             if (c->buffer == NULL) {
                 rc = NGX_ERROR;
                 break;
@@ -417,7 +417,7 @@ ngx_nsoc_core_create_srv_conf(ngx_conf_t *cf)
     cscf->line = cf->conf_file->line;
     cscf->resolver_timeout = NGX_CONF_UNSET_MSEC;
     cscf->tcp_nodelay = NGX_CONF_UNSET;
-    cscf->nsoc_buffer_size = NGX_CONF_UNSET_SIZE;
+    cscf->nsoc_preread_buffer_size = NGX_CONF_UNSET_SIZE;
     cscf->preread_timeout = NGX_CONF_UNSET_MSEC;
 
     return cscf;
@@ -468,10 +468,10 @@ ngx_nsoc_core_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_value(conf->tcp_nodelay, prev->tcp_nodelay, 1);
 
-    ngx_conf_merge_size_value(conf->nsoc_buffer_size,
-                              prev->nsoc_buffer_size, NOISE_PROTOCOL_PAYLOAD_SIZE);
+    ngx_conf_merge_size_value(conf->nsoc_preread_buffer_size,
+                              prev->nsoc_preread_buffer_size, NOISE_PROTOCOL_PAYLOAD_SIZE);
 
-    if (conf->nsoc_buffer_size > NOISE_PROTOCOL_PAYLOAD_SIZE) {
+    if (conf->nsoc_preread_buffer_size > NOISE_PROTOCOL_PAYLOAD_SIZE) {
         ngx_log_error(
                 NGX_LOG_EMERG, cf->log, 0, "noise socket responder buffer too big");
         return NGX_CONF_ERROR ;

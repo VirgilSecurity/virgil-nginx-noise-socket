@@ -3,8 +3,8 @@
  * Copyright (C) Nginx, Inc.
  */
 
-#ifndef _NGX_NSOC_UPNOISE_ROUND_ROBIN_H_INCLUDED_
-#define _NGX_NSOC_UPNOISE_ROUND_ROBIN_H_INCLUDED_
+#ifndef _NGX_NSOC_UPSTREAM_ROUND_ROBIN_H_INCLUDED_
+#define _NGX_NSOC_UPSTREAM_ROUND_ROBIN_H_INCLUDED_
 
 #include <ngx_config.h>
 #include <ngx_core.h>
@@ -133,4 +133,4 @@ ngx_int_t ngx_nsoc_upstream_get_round_robin_peer(
 void ngx_nsoc_upstream_free_round_robin_peer(ngx_peer_connection_t *pc,
     void *data, ngx_uint_t state);
 
-#endif /* _NGX_NSOC_UPNOISE_ROUND_ROBIN_H_INCLUDED_ */
+#endif /* _NGX_NSOC_UPSTREAM_ROUND_ROBIN_H_INCLUDED_ */
