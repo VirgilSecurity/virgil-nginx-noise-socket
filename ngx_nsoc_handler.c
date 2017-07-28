@@ -1061,12 +1061,17 @@ ssize_t ngx_nsoc_recv(ngx_connection_t *c, u_char *buf, size_t size)
             return NGX_ERROR;
         }
 
-        b = ngx_create_temp_buf(c->pool, nc->noise_msg_recv_size);
+        b = ngx_calloc_buf(c->pool);
 
         if (b == NULL) {
             return NGX_ERROR;
         }
 
+        b->start = buf;
+
+        b->pos = b->start;
+        b->last = b->start;
+        b->end = b->last + nc->noise_msg_recv_size;
         b->temporary = 0;
     }
 
@@ -1094,7 +1099,6 @@ ssize_t ngx_nsoc_recv(ngx_connection_t *c, u_char *buf, size_t size)
 
                     c->read->error = 1;
 
-                    ngx_pfree(c->pool, b->start);
                     ngx_pfree(c->pool, b);
 
                     nc->noise_msg_recv_size = NGX_NSOC_SIZE_UNSET;
@@ -1116,11 +1120,8 @@ ssize_t ngx_nsoc_recv(ngx_connection_t *c, u_char *buf, size_t size)
                         NGX_LOG_DEBUG_EVENT, c->log, 0, "nsoc_read_decrypt: %d",
                         plain_data_size);
 
-                ngx_memcpy(buf, mbuf.data + NGX_NSOC_LEN_FIELD_SIZE, plain_data_size);
-
                 c->read->ready = 1;
 
-                ngx_pfree(c->pool, b->start);
                 ngx_pfree(c->pool, b);
 
                 nc->recv_buf = NULL;
@@ -1135,7 +1136,6 @@ ssize_t ngx_nsoc_recv(ngx_connection_t *c, u_char *buf, size_t size)
 
         if (n != NGX_AGAIN) {
 
-        	ngx_pfree(c->pool, b->start);
             ngx_pfree(c->pool, b);
 
             nc->recv_buf = NULL;
@@ -1336,6 +1336,10 @@ ssize_t ngx_nsoc_write(ngx_connection_t *c, u_char *data, size_t size)
     ngx_buf_t *b;
     NoiseBuffer mbuf;
 
+    if (data == NULL) {
+        return NGX_ERROR;
+    }
+
     s = c->data;
 
     if (s->client_noise_connection != NULL
@@ -1357,6 +1361,7 @@ ssize_t ngx_nsoc_write(ngx_connection_t *c, u_char *data, size_t size)
     if (nc->to_send == 0) {
 
         b = ngx_calloc_buf(c->pool);
+
         if (b == NULL) {
             return NGX_ERROR;
         }
@@ -1413,7 +1418,6 @@ ssize_t ngx_nsoc_write(ngx_connection_t *c, u_char *data, size_t size)
         ngx_log_debug1(NGX_LOG_DEBUG_EVENT, c->log, 0, "nsoc_write: %d", n);
 
         if (n > 0) {
-            //c->sent += n;
             b->pos += n;
 
             if (b->pos == b->last) {
