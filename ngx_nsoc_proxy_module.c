@@ -1534,7 +1534,7 @@ static ngx_int_t ngx_nsoc_proxy_set_noiselink(ngx_conf_t *cf,
     private_key->nelts = 1;
     pscf->noise->ctx->private_keys = private_key;
     pscf->noise->handshake_timeout = pscf->connect_timeout;
-    memcpy( pscf->noise->prologue.strPrologue,"NoiseLinkInit",13);
+    memcpy( pscf->noise->prologue.strPrologue,"NoiseSocketInit1",16);
     pscf->noise->prologue.header_len = swapw(NGX_NSOC_1MSG_NEG_DATA_SIZE);
     pscf->noise->prologue.header.version_id = NGX_NSOC_VERSION_ID;
     pscf->noise->prologue.header.cipher_id = (uint8_t)(NOISE_CIPHER_AESGCM & 0x0F);

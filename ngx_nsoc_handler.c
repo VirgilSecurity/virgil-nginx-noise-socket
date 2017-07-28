@@ -493,7 +493,6 @@ static ngx_int_t ngx_nsoc_handshake_start_action_write_message(ngx_connection_t 
             size = NGX_NSOC_3MSG_NEG_DATA_SIZE + 2*NGX_NSOC_LEN_FIELD_SIZE;
 
             *(uint16_t *)(&b->pos[0]) = swapw(NGX_NSOC_3MSG_NEG_DATA_SIZE);
-            *(uint16_t *)(&b->pos[2]) = NGX_NSOC_VERSION_ID;
 
             nc->msg_num = NGX_NSOC_1MSG;
 

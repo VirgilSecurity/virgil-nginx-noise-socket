@@ -261,7 +261,7 @@ ngx_nsoc_noiseserver_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 
     conf->noise->log = cf->log;
     conf->noise->handshake_timeout = conf->handshake_timeout;
-    memcpy( conf->noise->prologue.strPrologue,"NoiseLinkInit",13);
+    memcpy( conf->noise->prologue.strPrologue,"NoiseSocketInit1",16);
     conf->noise->prologue.header_len = swapw(NGX_NSOC_1MSG_NEG_DATA_SIZE);
 
     cscf = ngx_nsoc_conf_get_module_srv_conf(cf, ngx_nsoc_core_module);

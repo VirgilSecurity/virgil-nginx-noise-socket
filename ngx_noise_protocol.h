@@ -33,10 +33,10 @@ typedef enum {
 #pragma pack(push, 1)
 typedef struct noise_handshake_first_hdr_s {
 	uint16_t version_id;
-	uint8_t pattern_id;
 	uint8_t dh_id;
 	uint8_t cipher_id;
 	uint8_t hash_id;
+    uint8_t pattern_id;
 }noise_handshake_first_hdr_t;
 
 typedef struct noise_handshake_second_hdr_s {
@@ -49,7 +49,7 @@ typedef struct noise_handshake_third_hdr_s {
 }noise_handshake_third_hdr_t;
 
 typedef struct noise_prologue_data_s {
-	uint8_t strPrologue[13];
+	uint8_t strPrologue[16];
 	uint16_t header_len;
 	noise_handshake_first_hdr_t header;
 }noise_prologue_data_t;
