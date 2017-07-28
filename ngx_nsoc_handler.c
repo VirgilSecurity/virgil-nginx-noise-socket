@@ -1053,8 +1053,13 @@ ssize_t ngx_nsoc_recv(ngx_connection_t *c, u_char *buf, size_t size)
         if (n != NGX_OK) {
             return n;
         }
+
         if(nc->noise_msg_recv_size == NGX_NSOC_SIZE_UNSET) {
         	return NGX_AGAIN;
+        }
+
+        if (buf == NULL) {
+            return NGX_ERROR;
         }
 
         b = ngx_create_temp_buf(c->pool, nc->noise_msg_recv_size);
