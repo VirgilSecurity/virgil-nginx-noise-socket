@@ -261,14 +261,14 @@ static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s)
     }
 
     if (c->type == SOCK_STREAM) {
-        p = ngx_pnalloc(c->pool, pscf->buffer_size);
+        p = ngx_pnalloc(c->pool, pscf->buffer_size + NOISE_PROTOCOL_MAC_DATA_SIZE);
         if (p == NULL) {
             ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
             return;
         }
 
         u->downstream_buf.start = p;
-        u->downstream_buf.end = p + pscf->buffer_size;
+        u->downstream_buf.end = p + pscf->buffer_size + NOISE_PROTOCOL_MAC_DATA_SIZE;
         u->downstream_buf.pos = p;
         u->downstream_buf.last = p;
 
@@ -649,14 +649,14 @@ static void ngx_nsoc_proxy_init_upstream(ngx_nsoc_session_t *s)
     c->log->action = "proxying connection";
 
     if (u->upstream_buf.start == NULL) {
-        p = ngx_pnalloc(c->pool, pscf->buffer_size);
+        p = ngx_pnalloc(c->pool, pscf->buffer_size + NOISE_PROTOCOL_MAC_DATA_SIZE);
         if (p == NULL) {
             ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
             return;
         }
 
         u->upstream_buf.start = p;
-        u->upstream_buf.end = p + pscf->buffer_size;
+        u->upstream_buf.end = p + pscf->buffer_size + NOISE_PROTOCOL_MAC_DATA_SIZE;
         u->upstream_buf.pos = p;
         u->upstream_buf.last = p;
     }
@@ -1025,6 +1025,7 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
     ngx_buf_t *b;
     ngx_int_t rc;
     ngx_uint_t flags;
+    ngx_uint_t noise_recv_action;
     ngx_msec_t delay;
     ngx_chain_t *cl, **ll, **out, **busy;
     ngx_connection_t *c, *pc, *src, *dst;
@@ -1078,6 +1079,7 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
         if (do_write && dst) {
 
             if (*out || *busy || dst->buffered) {
+
                 rc = ngx_nsoc_top_filter(s, *out, from_upstream);
 
                 if (rc == NGX_ERROR) {
@@ -1101,7 +1103,16 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
             }
         }
 
-        size = b->end - b->last;
+        if ((s->client_noise_connection != NULL
+                && from_upstream)||
+            (s->server_noise_connection != NULL
+                && !from_upstream)) {
+            size = b->end - b->last;
+            noise_recv_action = 1;
+        } else {
+            size = b->end - b->last - NOISE_PROTOCOL_MAC_DATA_SIZE;
+            noise_recv_action = 0;
+        }
 
         if (size && src->read->ready && !src->read->delayed
                 && !src->read->error) {
@@ -1172,8 +1183,15 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
 
                 *ll = cl;
 
-                cl->buf->pos = b->last;
-                cl->buf->last = b->last + n;
+                if (noise_recv_action && n > 0) {
+                    cl->buf->pos = b->last + NGX_NSOC_LEN_FIELD_SIZE;
+                    cl->buf->last = cl->buf->pos + n;
+                } else {
+                    cl->buf->pos = b->last;
+                    cl->buf->last = b->last + n;
+                }
+                cl->buf->start = b->start;
+                cl->buf->end = b->end;
                 cl->buf->tag = (ngx_buf_tag_t) &ngx_nsoc_proxy_module;
 
                 cl->buf->temporary = (n ? 1 : 0);
@@ -1181,7 +1199,7 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
                 cl->buf->flush = 1;
 
                 *received += n;
-                b->last += n;
+                b->last = cl->buf->last;
                 do_write = 1;
 
                 continue;

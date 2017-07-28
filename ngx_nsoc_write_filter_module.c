@@ -71,7 +71,6 @@ static ngx_int_t ngx_nsoc_write_filter(ngx_nsoc_session_t *s,
     if (from_upstream) {
         c = s->connection;
         out = &ctx->from_upstream;
-
     } else {
         c = s->upstream->peer.connection;
         out = &ctx->from_downstream;
