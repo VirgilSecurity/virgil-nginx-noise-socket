@@ -5,7 +5,7 @@ Nginx module that implements Noise Socket Protocol by using Virgil Security infr
 
  - Own context in the Nginx server providing a functionality of TCP of a proxy.
  - Protection of traffic by means of [Noise Protocol](http://noiseprotocol.org/).
- - At the moment only `Noise_XX_25519_AESGCM_BLAKE2b` noise protocol pattern is realized.
+ - At the moment only `Noise_XX_25519_AESGCM_BLAKE2b` noise protocol pattern is implemented.
 
 ## Building of Nginx with the virgil-nginx-noise-socket module:
 
