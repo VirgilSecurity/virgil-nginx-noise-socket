@@ -261,14 +261,14 @@ static void ngx_nsoc_proxy_handler(ngx_nsoc_session_t *s)
     }
 
     if (c->type == SOCK_STREAM) {
-        p = ngx_pnalloc(c->pool, pscf->buffer_size + NOISE_PROTOCOL_MAC_DATA_SIZE);
+        p = ngx_pnalloc(c->pool, pscf->buffer_size + NOISE_PROTOCOL_MAC_DATA_SIZE + 2*NGX_NSOC_LEN_FIELD_SIZE);
         if (p == NULL) {
             ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
             return;
         }
 
         u->downstream_buf.start = p;
-        u->downstream_buf.end = p + pscf->buffer_size + NOISE_PROTOCOL_MAC_DATA_SIZE;
+        u->downstream_buf.end = p + pscf->buffer_size + NOISE_PROTOCOL_MAC_DATA_SIZE + 2*NGX_NSOC_LEN_FIELD_SIZE;
         u->downstream_buf.pos = p;
         u->downstream_buf.last = p;
 
@@ -649,14 +649,14 @@ static void ngx_nsoc_proxy_init_upstream(ngx_nsoc_session_t *s)
     c->log->action = "proxying connection";
 
     if (u->upstream_buf.start == NULL) {
-        p = ngx_pnalloc(c->pool, pscf->buffer_size + NOISE_PROTOCOL_MAC_DATA_SIZE);
+        p = ngx_pnalloc(c->pool, pscf->buffer_size + NOISE_PROTOCOL_MAC_DATA_SIZE + 2*NGX_NSOC_LEN_FIELD_SIZE);
         if (p == NULL) {
             ngx_nsoc_proxy_finalize(s, NGX_NSOC_INTERNAL_SERVER_ERROR);
             return;
         }
 
         u->upstream_buf.start = p;
-        u->upstream_buf.end = p + pscf->buffer_size + NOISE_PROTOCOL_MAC_DATA_SIZE;
+        u->upstream_buf.end = p + pscf->buffer_size + NOISE_PROTOCOL_MAC_DATA_SIZE + 2*NGX_NSOC_LEN_FIELD_SIZE;
         u->upstream_buf.pos = p;
         u->upstream_buf.last = p;
     }
@@ -1074,6 +1074,18 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
         busy = &u->upstream_busy;
     }
 
+    if ((s->client_noise_connection != NULL
+            && from_upstream)||
+        (s->server_noise_connection != NULL
+            && !from_upstream)) {
+        noise_recv_action = 1;
+    } else {
+        noise_recv_action = 0;
+        b->pos = b->start + 2*NGX_NSOC_LEN_FIELD_SIZE;
+        b->last = b->pos;
+
+    }
+
     for (;;) {
 
         if (do_write && dst) {
@@ -1097,21 +1109,21 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
                         (ngx_buf_tag_t) &ngx_nsoc_proxy_module);
 
                 if (*busy == NULL) {
-                    b->pos = b->start;
-                    b->last = b->start;
+                    if(noise_recv_action){
+                        b->pos = b->start;
+                        b->last = b->start;
+                    } else {
+                        b->pos = b->start + 2*NGX_NSOC_LEN_FIELD_SIZE;
+                        b->last = b->pos;
+                    }
                 }
             }
         }
 
-        if ((s->client_noise_connection != NULL
-                && from_upstream)||
-            (s->server_noise_connection != NULL
-                && !from_upstream)) {
+        if (noise_recv_action) {
             size = b->end - b->last;
-            noise_recv_action = 1;
         } else {
             size = b->end - b->last - NOISE_PROTOCOL_MAC_DATA_SIZE;
-            noise_recv_action = 0;
         }
 
         if (size && src->read->ready && !src->read->delayed
