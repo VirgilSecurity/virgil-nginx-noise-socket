@@ -1074,6 +1074,9 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
         busy = &u->upstream_busy;
     }
 
+    b->pos = b->start + 2*NGX_NSOC_LEN_FIELD_SIZE;
+    b->last = b->pos;
+
     if ((s->client_noise_connection != NULL
             && from_upstream)||
         (s->server_noise_connection != NULL
@@ -1081,9 +1084,6 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
         noise_recv_action = 1;
     } else {
         noise_recv_action = 0;
-        b->pos = b->start + 2*NGX_NSOC_LEN_FIELD_SIZE;
-        b->last = b->pos;
-
     }
 
     for (;;) {
@@ -1109,13 +1109,8 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
                         (ngx_buf_tag_t) &ngx_nsoc_proxy_module);
 
                 if (*busy == NULL) {
-                    if(noise_recv_action){
-                        b->pos = b->start;
-                        b->last = b->start;
-                    } else {
-                        b->pos = b->start + 2*NGX_NSOC_LEN_FIELD_SIZE;
-                        b->last = b->pos;
-                    }
+                    b->pos = b->start + 2 * NGX_NSOC_LEN_FIELD_SIZE;
+                    b->last = b->pos;
                 }
             }
         }
@@ -1144,7 +1139,11 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
                 }
             }
 
-            n = src->recv(src, b->last, size);
+            if(noise_recv_action) {
+                n = src->recv(src, b->start, size);
+            } else {
+                n = src->recv(src, b->last, size);
+            }
 
             if (n == NGX_AGAIN) {
                 break;
@@ -1195,15 +1194,12 @@ static void ngx_nsoc_proxy_process(ngx_nsoc_session_t *s,
 
                 *ll = cl;
 
-                if (noise_recv_action && n > 0) {
-                    cl->buf->pos = b->last + NGX_NSOC_LEN_FIELD_SIZE;
-                    cl->buf->last = cl->buf->pos + n;
-                } else {
-                    cl->buf->pos = b->last;
-                    cl->buf->last = b->last + n;
-                }
                 cl->buf->start = b->start;
                 cl->buf->end = b->end;
+
+                cl->buf->pos = b->last;
+                cl->buf->last = b->last + n;
+
                 cl->buf->tag = (ngx_buf_tag_t) &ngx_nsoc_proxy_module;
 
                 cl->buf->temporary = (n ? 1 : 0);
