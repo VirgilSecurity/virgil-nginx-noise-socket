@@ -32,7 +32,7 @@ for Centos 7:
 * Installation of library `Noise-C` in system:
 
 ```bash
-	$ make install
+    $ make install
 ```
 ###### For option of use as a crypto backend of libsodium:
 *  To take stable release of libsodium and to build it: 
@@ -54,16 +54,16 @@ for Centos 7:
   
  4. Source code of the nginx server can be taken form [nginx.org](http://nginx.org/download/nginx-1.12.1.tar.gz). You must download and unpack source code of server in home directory
  ```bash
-	$ mkdir ~/workspace
-	$ tar -xvf path/to/nginx-1.12.1.tar.gz -C ~/workspace
+    $ mkdir ~/workspace
+    $ tar -xvf path/to/nginx-1.12.1.tar.gz -C ~/workspace
  ```
  5. To clone repository of virgil-nginx-noise-socket module into ~/workspace/nginx-1.12.1/virgil-nginx-noise-socket
  ```bash
- 	$ git clone https://github.com/VirgilSecurity/virgil-nginx-noise-socket 				~/workspace/nginx-1.12.1/virgil-nginx-noise-socket
+    $ git clone https://github.com/VirgilSecurity/virgil-nginx-noise-socket ~/workspace/nginx-1.12.1/virgil-nginx-noise-socket
  ```
  6.  The example of a script for build of the nginx server with the module is located in `virgil-nginx-noise-socket/example/nginx_configure.sh`. You must copy this script to root directory of source code of nginx and run this
  ```bash
- 	$ cp ~/workspace/nginx-1.12.1/virgil-nginx-noise-socket/example/nginx_configure.sh ~/workspace/nginx-1.12.1/
+    $ cp ~/workspace/nginx-1.12.1/virgil-nginx-noise-socket/example/nginx_configure.sh ~/workspace/nginx-1.12.1/
     $ sudo ~/workspace/nginx-1.12.1/nginx_configure.sh
  ```
  
@@ -92,17 +92,17 @@ for Centos 7:
 * To copy file `nginx.conf` from the folder `virgil-nginx-noise-socket/example/` into /etc/nginx directory
 * To create self-signed ssl sertificate
 ```bash
-	$ sudo openssl genrsa -out /etc/ssl/nginx-selfsigned.key 2048
+    $ sudo openssl genrsa -out /etc/ssl/nginx-selfsigned.key 2048
     $ sudo openssl req -x509 -new -key /etc/ssl/nginx-selfsigned.key -days 10000 -out /etc/ssl/nginx-selfsigned.crt
 ```
 * To run nginx server
 ```bash
-	$ sudo ~/workspace/nginx-1.12.1/objs/nginx
+    $ sudo ~/workspace/nginx-1.12.1/objs/nginx
 ```
 * For testing open the browser and write `https://localhost`. You shall to see "Welcome to nginx!"
 * For nginx stop 
 ```bash
-	$ sudo ~/workspace/nginx-1.12.1/objs/nginx -s stop
+    $ sudo ~/workspace/nginx-1.12.1/objs/nginx -s stop
 ```
 
 ## Basic directives ##
