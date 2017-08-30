@@ -1,8 +1,4 @@
 #!/bin/bash
-#pcre libraries
-./objs/nginx -s stop
-#sudo apt-get install libpcre3 libpcre3-dev
-make clean
 #configure options
 #make clean
 ./configure \
