@@ -1067,7 +1067,7 @@ ssize_t ngx_nsoc_recv(ngx_connection_t *c, u_char *buf, size_t size)
             return NGX_ERROR;
         }
 
-        b->start = buf;
+        b->start = buf + NGX_NSOC_LEN_FIELD_SIZE;
 
         b->pos = b->start;
         b->last = b->start;
@@ -1177,6 +1177,8 @@ ngx_nsoc_send_chain(ngx_connection_t *c, ngx_chain_t *in, off_t limit)
                 continue;
             }
 
+            in->buf->pos = in->buf->start;
+
             n = c->send(c, in->buf->pos, in->buf->last - in->buf->pos);
 
             ngx_log_debug3(
@@ -1214,7 +1216,8 @@ ngx_nsoc_send_chain(ngx_connection_t *c, ngx_chain_t *in, off_t limit)
     buf = nc->buf;
 
     if (buf == NULL) {
-        buf = ngx_create_temp_buf(c->pool, nc->buffer_size);
+        buf = ngx_create_temp_buf(c->pool, nc->buffer_size + NOISE_PROTOCOL_MAC_DATA_SIZE + 2*NGX_NSOC_LEN_FIELD_SIZE);
+
         if (buf == NULL) {
             return NGX_CHAIN_ERROR ;
         }
@@ -1223,14 +1226,14 @@ ngx_nsoc_send_chain(ngx_connection_t *c, ngx_chain_t *in, off_t limit)
     }
 
     if (buf->start == NULL) {
-        buf->start = ngx_palloc(c->pool, nc->buffer_size);
+        buf->start = ngx_palloc(c->pool, nc->buffer_size + NOISE_PROTOCOL_MAC_DATA_SIZE + 2*NGX_NSOC_LEN_FIELD_SIZE);
         if (buf->start == NULL) {
             return NGX_CHAIN_ERROR ;
         }
 
         buf->pos = buf->start;
         buf->last = buf->start;
-        buf->end = buf->start + nc->buffer_size;
+        buf->end = buf->start + nc->buffer_size + NOISE_PROTOCOL_MAC_DATA_SIZE + 2*NGX_NSOC_LEN_FIELD_SIZE;
     }
 
     send = buf->last - buf->pos;
@@ -1247,6 +1250,8 @@ ngx_nsoc_send_chain(ngx_connection_t *c, ngx_chain_t *in, off_t limit)
                 in = in->next;
                 continue;
             }
+
+            in->buf->pos = in->buf->start;
 
             size = in->buf->last - in->buf->pos;
 
@@ -1266,7 +1271,7 @@ ngx_nsoc_send_chain(ngx_connection_t *c, ngx_chain_t *in, off_t limit)
 
             buf->last += size;
             in->buf->pos += size;
-            send += size;
+            send += size - 2*NGX_NSOC_LEN_FIELD_SIZE;
 
             if (in->buf->pos == in->buf->last) {
                 in = in->next;
@@ -1331,14 +1336,16 @@ ngx_nsoc_send_chain(ngx_connection_t *c, ngx_chain_t *in, off_t limit)
 ssize_t ngx_nsoc_write(ngx_connection_t *c, u_char *data, size_t size)
 {
     int n;
+    size_t data_size;
     ngx_nsoc_session_t *s;
     ngx_noise_connection_t *nc;
     ngx_buf_t *b;
     NoiseBuffer mbuf;
 
-    if (data == NULL) {
+    if ((data == NULL) || (size < 2*NGX_NSOC_LEN_FIELD_SIZE)){
         return NGX_ERROR;
     }
+    data_size = size - 2*NGX_NSOC_LEN_FIELD_SIZE;
 
     s = c->data;
 
@@ -1351,10 +1358,11 @@ ssize_t ngx_nsoc_write(ngx_connection_t *c, u_char *data, size_t size)
     } else
         return NGX_ERROR;
 
-    ngx_log_debug1(NGX_LOG_DEBUG_EVENT, c->log, 0, "nsoc_to_write: %uz", size);
+    ngx_log_debug1(NGX_LOG_DEBUG_EVENT, c->log, 0, "nsoc to write: %uz", size);
 
-    if (size > nc->buffer_size)
+    if (data_size > nc->buffer_size) {
         return NGX_ERROR;
+    }
 
     b = nc->send_buf;
 
@@ -1366,25 +1374,17 @@ ssize_t ngx_nsoc_write(ngx_connection_t *c, u_char *data, size_t size)
             return NGX_ERROR;
         }
 
+        b->start = data;
+
         b->memory = 1;
-        b->start = ngx_pcalloc(
-                c->pool,
-                size + NOISE_PROTOCOL_MAC_DATA_SIZE + 2*NGX_NSOC_LEN_FIELD_SIZE);
-
-        if (b->start == NULL) {
-            return NGX_ERROR;
-        }
-
         b->pos = b->start + NGX_NSOC_LEN_FIELD_SIZE;
-        b->end = b->pos + size + NOISE_PROTOCOL_MAC_DATA_SIZE + NGX_NSOC_LEN_FIELD_SIZE;
+        b->end = b->pos + data_size + NOISE_PROTOCOL_MAC_DATA_SIZE + NGX_NSOC_LEN_FIELD_SIZE;
         b->last_buf = 1;
 
-        b->pos[0] = (uint8_t) (size >> 8);
-        b->pos[1] = (uint8_t) size;
+        b->pos[0] = (uint8_t) (data_size >> 8);
+        b->pos[1] = (uint8_t) data_size;
 
-        ngx_memcpy(b->pos + NGX_NSOC_LEN_FIELD_SIZE, data, size);
-
-        noise_buffer_set_inout(mbuf, b->pos, size + NGX_NSOC_LEN_FIELD_SIZE, b->end + NGX_NSOC_LEN_FIELD_SIZE - b->pos);
+        noise_buffer_set_inout(mbuf, b->pos, data_size + NGX_NSOC_LEN_FIELD_SIZE, b->end - b->pos);
         n = noise_cipherstate_encrypt(
                 nc->noise_connection.NoiseSendCipherObj, &mbuf);
 
@@ -1393,7 +1393,6 @@ ssize_t ngx_nsoc_write(ngx_connection_t *c, u_char *data, size_t size)
             ngx_noise_protocol_log_error(
                     n, "encrypt", c->log, NGX_LOG_DEBUG_EVENT);
 
-            ngx_pfree(c->pool, b->start);
             ngx_pfree(c->pool, b);
 
             nc->send_buf = NULL;
@@ -1423,7 +1422,6 @@ ssize_t ngx_nsoc_write(ngx_connection_t *c, u_char *data, size_t size)
             if (b->pos == b->last) {
                 n = size;
 
-                ngx_pfree(c->pool, b->start);
                 ngx_pfree(c->pool, b);
 
                 nc->send_buf = NULL;
