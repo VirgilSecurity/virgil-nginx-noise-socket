@@ -13,8 +13,6 @@ Nginx module that implements Noise Socket Protocol by using Virgil Security infr
 
 * Autoconf
 * Automake
-
-for Centos 7:
 * pcre
 * pcre-devel
 * pcre2
@@ -26,46 +24,44 @@ for Centos 7:
 #### Building
 
 1. The virgil-nginx-noise-socket module is tested with nginx-1.12.1.
-2. Module is tested in an OS Linux Mint 17.1 Rebecca 64-bit, Linux Mint 18.1 Serena 64-bit.
+2. Module is tested in an OS Linux Mint 17.1 Rebecca 64-bit, Linux Mint 18.1 Serena 64-bit, Centos 7.
 3. Set [Noise-C](https://github.com/rweather/noise-c) library is necessary for building of the server.
 * How to build `Noise-C` it is described in [Noise-C Documentation](http://rweather.github.io/noise-c/index.html).
 * Installation of library `Noise-C` in system:
-
 ```bash
     $ make install
 ```
 ###### For option of use as a crypto backend of libsodium:
 *  To take stable release of libsodium and to build it: 
-  ```bash
+```bash
     $ git clone https://github.com/jedisct1/libsodium.git -b stable
     $ ./configure
     $ make && make check
     $ sudo make install
-  ```
+```
   * To build the ´Noise-C´ library with option:
-  
-  ```bash
+```bash
     $ autoreconf -i
     $ ./configure --with-openssl --with-libsodium
     $ make
     $ make check
- ``` 
+```
   * Make sure that the list of the required libraries contains libsodium in the `virgil-nginx-noise-socket/config` file (a line 37, ngx_module_libs="... - lsodium"
   
  4. Source code of the nginx server can be taken form [nginx.org](http://nginx.org/download/nginx-1.12.1.tar.gz). You must download and unpack source code of server in home directory
- ```bash
+```bash
     $ mkdir ~/workspace
     $ tar -xvf path/to/nginx-1.12.1.tar.gz -C ~/workspace
- ```
+```
  5. To clone repository of virgil-nginx-noise-socket module into ~/workspace/nginx-1.12.1/virgil-nginx-noise-socket
- ```bash
+```bash
     $ git clone https://github.com/VirgilSecurity/virgil-nginx-noise-socket ~/workspace/nginx-1.12.1/virgil-nginx-noise-socket
- ```
+```
  6.  The example of a script for build of the nginx server with the module is located in `virgil-nginx-noise-socket/example/nginx_configure.sh`. You must copy this script to root directory of source code of nginx and run this
- ```bash
+```bash
     $ cp ~/workspace/nginx-1.12.1/virgil-nginx-noise-socket/example/nginx_configure.sh ~/workspace/nginx-1.12.1/
     $ sudo ~/workspace/nginx-1.12.1/nginx_configure.sh
- ```
+```
  
  7. The example of a test configuration of the server is located in `virgil-nginx-noise-socket/example/nginx.conf`. The configuration realizes a functionality of reverse proxy and a backend server working in one copy of nginx launched by the local machine. The configuration works as follows:
 
