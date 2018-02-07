@@ -34,7 +34,7 @@
     ngx_module_name=ngx_nsoc_write_filter_module
     ngx_module_srcs="$ngx_addon_dir/ngx_nsoc_write_filter_module.c"
     ngx_module_incs="$ngx_addon_dir"
-    ngx_module_libs="-lnoisekeys -lnoiseprotocol"
+    ngx_module_libs="-lnoisekeys -lnoiseprotocol  -lsodium"
 
   . auto/module
 
